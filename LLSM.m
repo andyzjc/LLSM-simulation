@@ -2,59 +2,89 @@ close all
 clear all
 
 %% Initialize some parameters for back pupil plane
-Nxz = 1025; % pixels
-Ny = 1025; % pixels
+Nxz = 1024; % pixels
+Ny = 1024; % pixels
 
 % Physical Parameter 
 wavelength = 0.488; % um
 n = 1.33; % water
-NAdect = 1.0;
+NAdect = 1;
 NAmin = 0.57;
 NAmax = 0.65;
 NAideal = (NAmin + NAmax)/2;
 
-%NAideal =0.6;
+% NAideal =0.61;
 
 % Real space image parameter
-xz_scale = 2;
-deltax = wavelength / (xz_scale * NAdect); 
+xz_scale = 2.5;
+deltax = wavelength / (xz_scale * 2 * NAdect) ; % oversampling
 deltaz = deltax;
 
 % Fourier space image parameter
-k0 = 2*pi/wavelength;
-k0_med = k0 * 1.33;
-deltakx = 2*pi / (Nxz * deltax);
+k0_med = 2* pi/wavelength;
+Kbound = 1/(2*deltax); % Nyquist
+deltakx = 2*Kbound / Nxz;
 deltakz = deltakx;
-Kbound = Nxz/2 * deltakx;
+k_ideal = NAideal / (wavelength); % in unit of 1/um
 
 % Create mesh 
-[ax, az] = meshgrid(  -(Nxz-1)/2 : (Nxz-1)/2 ) ; 
+[ax, az] = meshgrid(  -(Nxz)/2 + 1 : (Nxz)/2 ) ; 
 kx = deltakx * ax;  %in unit 1/um
 kz = deltakz * az;
 x = deltax * ax;
 z = deltaz * az; 
+X = x(1,:);
+Z = z(:,1);
+KX = kx(1,:);
+KZ = kz(:,1)';
 
 %% Generate Ideal lattice 
 Illumi_ideal = zeros(size(kx));
 theta = [30, 90, 150, 210, 270, 330]; % hexogonal
 % theta = [30, 150, 210, 330]; % square
-theta = [90, 270]; % standing wave
-k_ideal = NAideal / wavelength; % in unit of 1/um
-kxposition = k_ideal * cosd(theta);
-kzposition = k_ideal * sind(theta);
+% theta = [90, 270]; % standing wave
 
+kxposition = k_ideal * cosd(theta) / deltakx % pixel
+kzposition = k_ideal * sind(theta) / deltakz % pixel
+
+% kxposition_sign = sign(kxposition);
+% kzposition_sign = sign(kzposition);
+% 
+% kxpositiontop = ceil(abs(kxposition)) .* kxposition_sign
+% kxpositionbottom = floor(abs(kxposition)) .* kxposition_sign
+% 
+% kzpositiontop = ceil(abs(kzposition)) .* kzposition_sign
+% kzpositionbottom = floor(abs(kzposition)) .* kzposition_sign
+% 
+% % 
+% % kxposition_round = (Nxz-1)/2 + round(abs(kxposition)) .* kxposition_sign;
+% % kzposition_round = (Nxz-1)/2 + round(abs(kzposition)) .* kzposition_sign;
+% 
+% kzposition = [62   125    62   -62  -124  -62]
 % Ideal lattice illumination
 for j = 1:length(kxposition)
-    Illumi_ideal(...
-        ((Nxz-1)/2 + round(kzposition(j)/deltakz)):((Nxz-1)/2 + round(kzposition(j)/deltakz))+1, ...
-        (Nxz-1)/2 + round(kxposition(j)/deltakx)) = 1;
+
+    Illumi_ideal( ...
+        (Nxz)/2 + round(kzposition(j)) - 10 : (Nxz)/2 + round(kzposition(j)) + 10 ,...
+        (Nxz)/2 + round(kxposition(j)) : (Nxz)/2 + round(kxposition(j))) = 1;
 end
 
 % Ideal lattice
-E_ideal = fftshift(fft2(Illumi_ideal));
+E_ideal = myFFT(Illumi_ideal,0);
 
 fig1 = figure(1);
-    image1 = imagesc(x(1,:)/wavelength, z(:,1)/wavelength,abs(E_ideal));
+    subplot(1,2,1)
+    image100 = imagesc(KX, KZ, Illumi_ideal);
+    colormap("jet")
+    title("Bounded Ideal Lattice")
+    xlabel("x/wavelength ")
+    ylabel("z/wavelength ")
+    colorbar;
+    axis image;
+
+    subplot(1,2,2)
+    image1 = imagesc(X, Z ,abs(E_ideal));
+    caxis([min(min(abs(E_ideal))) max(max(abs(E_ideal)))]);
     colormap("jet")
     title("Ideal Lattice")
     xlabel("x/wavelength ")
@@ -63,11 +93,12 @@ fig1 = figure(1);
     axis image;
 
 %% Gaussian Bounding and get rear pupil illum back
-a = 30*wavelength;
+a = 5*wavelength;
 gauss_bound = exp(-2 * z.^2 / a^2);
 E_bound = gauss_bound .* E_ideal;
 fig2 = figure(2);
-    image2 = imagesc(x(1,:)/wavelength, z(:,1)/wavelength,abs(E_bound));
+    subplot(1,2,1)
+    image2 = imagesc(X, Z,abs(E_bound));
     colormap("jet")
     title("Bounded Ideal Lattice")
     xlabel("x/wavelength ")
@@ -75,14 +106,15 @@ fig2 = figure(2);
     colorbar;
     axis image;
 
-%% Reverse
-Illum_bound = abs(fft2(fftshift(E_bound))).^2;
-fig3 = figure(3);
-    image3 = imagesc(kx(1,:)/Kbound, kz(:,1)/Kbound,Illum_bound);
+Illum_bound = abs(myFFT(E_bound,1)).^2;
+Illum_bound = Illum_bound/max(max(Illum_bound));
+    subplot(1,2,2)
+    image3 = imagesc(KX, KZ,Illum_bound);
     colormap(jet)
+%     caxis([min(min(Illum_bound)) max(max(Illum_bound))]);
     title("Bounded Illumination")
-    xlabel("kx (Normalized by 2*pi/lambda)")
-    ylabel("kz (Normalized by 2*pi/lambda)")
+    xlabel("kx (Constant/lambda)")
+    ylabel("kz (Constant/lambda)")
     colorbar;
     axis image;
 
@@ -90,34 +122,34 @@ fig3 = figure(3);
 A_mask = zeros(size(kx));
 k_NAmax = NAmax/wavelength; % 1/um
 k_NAmin = NAmin/wavelength; 
-k_diff = k_NAmax - k_NAmin; 
 
-% radius = k_ideal; % pixels
-% thickness = k_diff; % pixels
-
-A_mask = ((k_NAmax >= sqrt(kx.^2 + kz.^2)).* (k_NAmin <= sqrt(kx.^2 + kz.^2)));
+A_mask = ((k_NAmax > sqrt(kx.^2 + kz.^2)) .* (k_NAmin < sqrt(kx.^2 + kz.^2)));
 fig4 = figure(4);
-    image4 = imagesc(kx(1,:)/Kbound, kz(:,1)/Kbound, A_mask);
+    subplot(1,2,1)
+    image4 = imagesc(KX, KZ, imfuse(A_mask,Illum_bound));
     title("Mask")
-    xlabel("kx (Normalized by 2*pi/lambda)")
-    ylabel("kz (Normalized by 2*pi/lambda)")
+    xlabel("kx (Constant/lambda)")
+    ylabel("kz (Constant/lambda)")
     colorbar;
     axis image;
 Pupil_fun = Illum_bound .* A_mask;
-fig5 = figure(5);
-    image1 = imagesc(kx(1,:)/Kbound, kz(:,1)/Kbound, Pupil_fun);
+    subplot(1,2,2)
+    image1 = imagesc(KX, KZ, Pupil_fun);
+    caxis([min(min(Pupil_fun)) max(max(Pupil_fun))]);
     colormap(jet)
     title("Pupil Function")
-    xlabel("kx (Normalized by 2*pi/lambda)")
-    ylabel("kz (Normalized by 2*pi/lambda)")
+    xlabel("kx (Constant/lambda)")
+    ylabel("kz (Constant/lambda)")
     colorbar;
     axis image;
 
 
 %% PSF(x,z)
-PSF_exc = abs( fftshift(fft2(fftshift(Pupil_fun) )) ).^2;
+% PSF_exc = abs( fftshift(fft2(fftshift(Pupil_fun) )) ).^2;
+PSF_exc = abs( myFFT(Pupil_fun,1) ).^2;
+PSF_exc = PSF_exc/max(max(PSF_exc));
 fig5 = figure(6);
-    image2 = imagesc(x(1,:)/wavelength, z(:,1)/wavelength,PSF_exc);
+    image2 = imagesc(X, Z,PSF_exc);
     caxis([min(min(PSF_exc)) max(max(PSF_exc))]);
     colormap(jet)
     title("Excitation PSF")
@@ -127,23 +159,34 @@ fig5 = figure(6);
     axis image;
 
 %% OTF
-OTF_exc = abs(fftshift(fft2(PSF_exc)));
+OTF_exc = abs(myFFT(PSF_exc,1));
+OTF_exc = OTF_exc/max(max(OTF_exc));
 fig6 = figure(6);
-    image3 = imagesc(kx(1,:)/Kbound, kz(:,1)/Kbound,OTF_exc);
+    image3 = imagesc(KX, KZ,OTF_exc);
     caxis([min(min(OTF_exc)) max(max(OTF_exc))]);
     colormap(jet)
     title("Excitation OTF")
-    xlabel("kx (Normalized by 2*pi/lambda)")
-    ylabel("kz (Normalized by 2*pi/lambda)")
+    xlabel("kx (Constant/lambda)")
+    ylabel("kz (Constant/lambda)")
     colorbar;
     axis image;
 
 %% Dither 
-PSF_exc_dither = meshgrid(sum(PSF_exc,2))';  
-plot(z(:,1),PSF_exc_dither(:,513)/max(PSF_exc_dither(:,513)))
+% dither_period = round(100 * wavelength / deltax);
+% dither_period = round( ( 100 * wavelength ) / deltax);
+PSF_exc_dither = meshgrid(sum(PSF_exc(:,1:dither_period),2))';  
+PSF_exc_dither = PSF_exc + circshift(PSF_exc,dither_period,2);
+PSF_exc_dither = PSF_exc_dither / max(max(PSF_exc_dither));
+
 fig7 = figure(7);
-    image4 = imagesc(x(1,:)/wavelength, z(:,1)/wavelength,PSF_exc_dither);
-    caxis([min(min(PSF_exc_dither)) max(max(PSF_exc_dither))]);
+
+    subplot(1,2,2)
+h1 = plot(Z(Nxz/2-200:Nxz/2+200),PSF_exc_dither(Nxz/2-200:Nxz/2+200,512));
+    h1.Parent.YAxis.TickValues = [0, 0.25, 0.5, 0.75, 1];
+    grid on
+
+subplot(1,2,1)
+image4 = imagesc(X, Z ,PSF_exc_dither);
     colormap(jet)
     title("Excitation PSF - Dither")
     xlabel("x/wavelength ")
@@ -159,8 +202,8 @@ fig8 = figure(8);
     caxis([min(min(OTF_dither)) max(max(OTF_dither))]);
     colormap(jet)
     title("Excitation OTF - Dither")
-    xlabel("kx (Normalized by 2*pi/lambda)")
-    ylabel("kz (Normalized by 2*pi/lambda)")
+    xlabel("kx (Constant/lambda)")
+    ylabel("kz (Constant/lambda)")
     colorbar;
     axis image;
 
@@ -176,19 +219,19 @@ Ein = Pupil_fun/(max(max(Pupil_fun)));
 
 %% Propagator
 
-transverse = exp(1i * kx * x + 1i * kz * z);
-% for i = 1:length(y)
-for i = 1:10:500
-    propagator = exp(1i * ky * y(i));
-    Eout = fftshift(fft2((Ein .* propagator)));
-    imagesc(x(1,:)/wavelength,z(:,1)/wavelength,abs(Eout.^2))
-    drawnow
-    colormap(jet)
-    pause(0.5)
-    caxis([0 4000])
-    E_prop(:,:,i) = Eout;
-    I_prop(:,:,i) = abs(Eout.^2);
-end  
+% transverse = exp(1i * kx * x + 1i * kz * z);
+% % for i = 1:length(y)
+% for i = 1:10:500
+%     propagator = exp(1i * ky * y(i));
+%     Eout = fftshift(fft2((Ein .* propagator)));
+%     imagesc(x(1,:)/wavelength,z(:,1)/wavelength,abs(Eout.^2))
+%     drawnow
+%     colormap(jet)
+%     pause(0.5)
+%     caxis([0 4000])
+%     E_prop(:,:,i) = Eout;
+%     I_prop(:,:,i) = abs(Eout.^2);
+% end  
 
 %% Fresnel Propagation
 % Ein = fftshift(fft2(Pupil_fun ));
