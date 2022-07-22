@@ -2,8 +2,8 @@ close all
 clear all
 
 %% Initialize some parameters for back pupil plane
-Nxz = 1024; % pixels
-Ny = 1024; % pixels
+Nxz = 1025; % pixels
+Ny = 257; % pixels
 
 % Physical Parameter 
 wavelength = 0.488; % um
@@ -12,12 +12,14 @@ NAdect = 1;
 NAmin = 0.57;
 NAmax = 0.65;
 NAideal = (NAmin + NAmax)/2;
+dither_period = 5; % in micron
+dither_step = 201; % number of steps per dither period 
 
-% NAideal =0.61;
+% when 2 plane wave traveling in opposite direction and interfere with each
+% other, the periodicity of resulting standing wave is wavelength/4pi
 
 % Real space image parameter
-xz_scale = 2.5;
-deltax = wavelength / (xz_scale * 2 * NAdect) ; % oversampling
+deltax = wavelength/4/pi; % oversampling
 deltaz = deltax;
 
 % Fourier space image parameter
@@ -25,10 +27,11 @@ k0_med = 2* pi/wavelength;
 Kbound = 1/(2*deltax); % Nyquist
 deltakx = 2*Kbound / Nxz;
 deltakz = deltakx;
-k_ideal = NAideal / (wavelength); % in unit of 1/um
+% k_ideal = NAideal / (wavelength); % in unit of 1/um
+k_ideal = NAideal/ ( 2* pi) * Kbound;
 
 % Create mesh 
-[ax, az] = meshgrid(  -(Nxz)/2 + 1 : (Nxz)/2 ) ; 
+[ax, az] = meshgrid(  -(Nxz-1)/2 : (Nxz-1)/2 ) ; 
 kx = deltakx * ax;  %in unit 1/um
 kz = deltakz * az;
 x = deltax * ax;
@@ -44,8 +47,8 @@ theta = [30, 90, 150, 210, 270, 330]; % hexogonal
 % theta = [30, 150, 210, 330]; % square
 % theta = [90, 270]; % standing wave
 
-kxposition = k_ideal * cosd(theta) / deltakx % pixel
-kzposition = k_ideal * sind(theta) / deltakz % pixel
+kxposition = k_ideal * cosd(theta) / deltakx; % pixel
+kzposition = k_ideal * sind(theta) / deltakz; % pixel
 
 % kxposition_sign = sign(kxposition);
 % kzposition_sign = sign(kzposition);
@@ -60,13 +63,13 @@ kzposition = k_ideal * sind(theta) / deltakz % pixel
 % % kxposition_round = (Nxz-1)/2 + round(abs(kxposition)) .* kxposition_sign;
 % % kzposition_round = (Nxz-1)/2 + round(abs(kzposition)) .* kzposition_sign;
 % 
-% kzposition = [62   125    62   -62  -124  -62]
+% kzposition = [78   157    78   -78  -157  -78]
 % Ideal lattice illumination
 for j = 1:length(kxposition)
 
     Illumi_ideal( ...
-        (Nxz)/2 + round(kzposition(j)) - 10 : (Nxz)/2 + round(kzposition(j)) + 10 ,...
-        (Nxz)/2 + round(kxposition(j)) : (Nxz)/2 + round(kxposition(j))) = 1;
+        (Nxz-1)/2 + round(kzposition(j)) ,...
+        (Nxz-1)/2 + round(kxposition(j)) ) = 1;
 end
 
 % Ideal lattice
@@ -74,16 +77,16 @@ E_ideal = myFFT(Illumi_ideal,0);
 
 fig1 = figure(1);
     subplot(1,2,1)
-    image100 = imagesc(KX, KZ, Illumi_ideal);
-    colormap("jet")
-    title("Bounded Ideal Lattice")
+image100 = imagesc(KX, KZ, Illumi_ideal);
+    colormap("gray")
+    title("Rear Pupil Illumination")
     xlabel("x/wavelength ")
     ylabel("z/wavelength ")
     colorbar;
     axis image;
 
     subplot(1,2,2)
-    image1 = imagesc(X, Z ,abs(E_ideal));
+image1 = imagesc(X, Z ,abs(E_ideal));
     caxis([min(min(abs(E_ideal))) max(max(abs(E_ideal)))]);
     colormap("jet")
     title("Ideal Lattice")
@@ -93,7 +96,7 @@ fig1 = figure(1);
     axis image;
 
 %% Gaussian Bounding and get rear pupil illum back
-a = 5*wavelength;
+a = 4*wavelength;
 gauss_bound = exp(-2 * z.^2 / a^2);
 E_bound = gauss_bound .* E_ideal;
 fig2 = figure(2);
@@ -146,7 +149,7 @@ Pupil_fun = Illum_bound .* A_mask;
 
 %% PSF(x,z)
 % PSF_exc = abs( fftshift(fft2(fftshift(Pupil_fun) )) ).^2;
-PSF_exc = abs( myFFT(Pupil_fun,1) ).^2;
+PSF_exc = abs( fftshift(fft2(fftshift(Pupil_fun))) ).^2;
 PSF_exc = PSF_exc/max(max(PSF_exc));
 fig5 = figure(6);
     image2 = imagesc(X, Z,PSF_exc);
@@ -159,7 +162,7 @@ fig5 = figure(6);
     axis image;
 
 %% OTF
-OTF_exc = abs(myFFT(PSF_exc,1));
+OTF_exc = abs(fftshift(fft2(fftshift(PSF_exc))));
 OTF_exc = OTF_exc/max(max(OTF_exc));
 fig6 = figure(6);
     image3 = imagesc(KX, KZ,OTF_exc);
@@ -172,16 +175,18 @@ fig6 = figure(6);
     axis image;
 
 %% Dither 
-% dither_period = round(100 * wavelength / deltax);
-% dither_period = round( ( 100 * wavelength ) / deltax);
-PSF_exc_dither = meshgrid(sum(PSF_exc(:,1:dither_period),2))';  
-PSF_exc_dither = PSF_exc + circshift(PSF_exc,dither_period,2);
+dither_period = 10/deltax; % micron
+PSF_exc_dither = PSF_exc;
+for jj = 1:dither_step
+    PSF_exc_dither = PSF_exc_dither + circshift(PSF_exc,round(jj*dither_period/dither_step),2)/2;
+end
+% PSF_exc_dither = meshgrid(sum(PSF_exc(:,1:dither_period/deltax),2))';  
 PSF_exc_dither = PSF_exc_dither / max(max(PSF_exc_dither));
 
 fig7 = figure(7);
 
     subplot(1,2,2)
-h1 = plot(Z(Nxz/2-200:Nxz/2+200),PSF_exc_dither(Nxz/2-200:Nxz/2+200,512));
+h1 = plot(Z,PSF_exc_dither(:,(Nxz-1)/2));
     h1.Parent.YAxis.TickValues = [0, 0.25, 0.5, 0.75, 1];
     grid on
 
@@ -191,7 +196,7 @@ image4 = imagesc(X, Z ,PSF_exc_dither);
     title("Excitation PSF - Dither")
     xlabel("x/wavelength ")
     ylabel("z/wavelength ")
-    colorbar;
+    colorbar;length(dither_step)
     axis image;
 
 %% Dither OTF 
@@ -208,8 +213,8 @@ fig8 = figure(8);
     axis image;
 
 %% Propagation in y-direction
-y_scale = 1;
-deltay = wavelength / n *y_scale; % 1 pixel = 50 wavelength
+y_scale = 100; 
+deltay = wavelength/4/pi * y_scale;
 ky = sqrt(k0_med^2 - kx.^2 - kz.^2);
 y = (0:Ny) * deltay; % max(y) = FOVy 
 
@@ -218,20 +223,19 @@ I_prop = E_prop;
 Ein = Pupil_fun/(max(max(Pupil_fun)));
 
 %% Propagator
-
-% transverse = exp(1i * kx * x + 1i * kz * z);
-% % for i = 1:length(y)
-% for i = 1:10:500
-%     propagator = exp(1i * ky * y(i));
-%     Eout = fftshift(fft2((Ein .* propagator)));
-%     imagesc(x(1,:)/wavelength,z(:,1)/wavelength,abs(Eout.^2))
-%     drawnow
-%     colormap(jet)
-%     pause(0.5)
-%     caxis([0 4000])
-%     E_prop(:,:,i) = Eout;
-%     I_prop(:,:,i) = abs(Eout.^2);
-% end  
+% for i = 1:length(y)
+for i = 1:length(y)
+    propagator = exp(1i * ky * y(i));
+    Eout = fftshift(fft2((Ein .* propagator)));
+    imagesc(x(1,:)/wavelength,z(:,1)/wavelength,abs(Eout.^2))
+    drawnow
+    colormap(jet)
+    pause(0.5)
+    caxis([0 4000])
+    disp(i)
+    E_prop(:,:,i) = Eout;
+    I_prop(:,:,i) = abs(Eout.^2);
+end  
 
 %% Fresnel Propagation
 % Ein = fftshift(fft2(Pupil_fun ));
