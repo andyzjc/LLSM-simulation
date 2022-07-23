@@ -17,7 +17,7 @@ NAmax = 0.65;
 NAideal = (NAmin + NAmax)/2;
 dither_period = 5; % um
 dither_step = 201; % number of steps per dither period 
-a = 5 ; % Gaussian Bounding, um
+a = 2; % Gaussian Bounding, um
 
 % when 2 plane wave traveling in opposite direction and interfere with each
 % other, the periodicity of resulting standing wave is wavelength/4pi
@@ -37,8 +37,8 @@ k_ideal = NAideal/ ( 2* pi) * Kbound;
 [ax, az] = meshgrid(  -(Nxz-1)/2 : (Nxz-1)/2 ) ; 
 kx = deltakx * ax;  %in unit 1/um
 kz = deltakz * az;
-x = 4 * pi * deltax * ax;
-z = 4 * pi * deltaz * az; 
+x = deltax * ax;
+z = deltaz * az; 
 X = x(1,:); % pixel length = wavelength
 Z = z(:,1); 
 KX = kx(1,:); % pixel length = 1/wavelength
@@ -89,21 +89,21 @@ image2 = imagesc(X, Z ,abs(E_ideal));
     title("Ideal Lattice, " + ...
           "\lambda_{exc}/n = " + num2str(wavelength, '%.3f') + "um" + ...
           " , n = " + num2str(n))
-    xlabel("x(\lambda) (um)")
-    ylabel("z(\lambda) (um)")
+    xlabel("x(\lambda/4\pi) (um)")
+    ylabel("z(\lambda/4\pi) (um)")
     colorbar;
     axis image;
 
 %% Gaussian Bounding and get rear pupil illum back
 
-gauss_bound = exp(-2 * z.^2 / a^2);
+gauss_bound = exp(-2 * z.^2 / (a)^2);
 E_bound = gauss_bound .* E_ideal;
     subplot(3,4,3)
 image3 = imagesc(X, Z, abs(E_bound));
     title("Bounded Ideal Lattice, " + ...
           "Bound width = " + num2str(a) + "um")
-    xlabel("x(\lambda) (um)")
-    ylabel("z(\lambda) (um)")
+    xlabel("x(\lambda/4\pi) (um)")
+    ylabel("z(\lambda/4\pi) (um)")
     colorbar;
     axis image;
 
@@ -156,8 +156,8 @@ PSF_exc = PSF_exc/max(max(PSF_exc));
     subplot(3,4,7)
 image7 = imagesc(X, Z, PSF_exc);
     title("Excitation PSF")
-    xlabel("x(\lambda) (um)")
-    ylabel("z(\lambda) (um)")
+    xlabel("x(\lambda/4\pi) (um)")
+    ylabel("z(\lambda/4\pi) (um)")
     colorbar;
     axis image;
 
@@ -188,8 +188,8 @@ image9 = imagesc(X, Z ,PSF_exc_dither);
     title("Dithered Excitation PSF, " + ...
           "T_d = " + num2str(dither_period) + "um, " +...
           "Dither Step = " + num2str(dither_step))
-    xlabel("x(\lambda) (um)")
-    ylabel("z(\lambda) (um)")
+    xlabel("x(\lambda/4\pi) (um)")
+    ylabel("z(\lambda/4\pi) (um)")
     colorbar;
     axis image;
 line1 = xline(X((Nxz+1)/2));    
@@ -204,7 +204,7 @@ PSF_exc_dither_profile = PSF_exc_dither_profile/max(max(PSF_exc_dither_profile))
 image10 = plot( Z(OTF_KZ_plot), PSF_exc_dither_profile(OTF_KZ_plot));
     title("PSF Dithered Line Profile")
     ylabel("Normalized a.u. ")
-    xlabel("z(\lambda) (um)")
+    xlabel("z(\lambda/4\pi) (um)")
     image10.LineWidth = 2;
     image10.Color = 'r';
     image10.Parent.YAxis.TickValues = linspace(0,1,11);
@@ -232,7 +232,7 @@ OTF_dither = OTF_dither/max(max(OTF_dither));
 image12 = plot( Z(OTF_KZ_plot), OTF_dither(OTF_KZ_plot));
     title("OTF Dithered Line Profile")
     ylabel("Normalized a.u. ")
-    xlabel("z(\lambda) (um)")
+    xlabel("z(\lambda/4\pi) (um)")
     image12.LineWidth = 2;
     image12.Color = 'r';
     image12.Parent.YAxis.TickValues = linspace(0,1,11);
