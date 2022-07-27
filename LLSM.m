@@ -2,7 +2,7 @@ clear all
 close all
 
 %% Desired Lattice
-theta = [30, 90, 150, 210, 270, 330]; % hexogonal
+ theta = [30, 90, 150, 210, 270, 330]; % hexogonal
 % theta = [30, 150, 210, 330]; % square
 % theta = [90, 270]; % standing wave
 
@@ -14,15 +14,15 @@ lambda_exc = 0.488; % um
 lambda_dect = 0.488;
 wavelength_exc =  lambda_exc / n;
 wavelength_dect = lambda_dect / n;
-NAmin = 0.50;
-NAmax = 0.60;
-NAdect = 1.1;
+NAmin = 0.36;
+NAmax = 0.46;
+NAdect = 1.0;
 NAideal = (NAmin + NAmax)/2;
 dither_period = 5; % um
 dither_step = 201; % number of s teps per dither period 
-gauss_bound_width = 3; % Gaussian Bounding, um
+gauss_bound_width = 5; % Gaussian Bounding, um
 xz_scale = 2;
-y_scale = 1;
+y_scale = 2;
 
 k_wave = 1/wavelength_exc;
 k_ideal = k_wave * NAideal / n;
@@ -34,6 +34,9 @@ deltax = 1/(2 * k_bound);
 kx = deltak * ax;  %in unit wavelength
 kz = kx';
 ky = sqrt(k_wave^2 - kx.^2 - kz.^2);
+
+ky(kx.^2 + kz.^2 > k_wave.^2 ) = 0;
+
 x = deltax * ax; 
 z = x'; 
 y = (0:Ny) * deltax * y_scale; % max(y) = FOVy 
@@ -51,12 +54,14 @@ Illumi_ideal = zeros(size(ax));
 kxposition = k_ideal * cosd(theta) /deltak; % pixel
 kzposition = k_ideal * sind(theta) /deltak; % pixel
 
+weighting =  [ exp(1i * pi/2),1,1,1,1,1];
+
 % Ideal lattice illumination
 for j = 1:length(kxposition)
 
     Illumi_ideal( ...
         (Nxz+1)/2 + round(kzposition(j)) ,...
-        (Nxz+1)/2 + round(kxposition(j)) ) = 1;
+        (Nxz+1)/2 + round(kxposition(j)) ) = 1 * weighting(j);
 end
 
 % Ideal lattice
@@ -64,7 +69,7 @@ E_ideal = ifft2(fftshift(Illumi_ideal)); % no need to shift since already at cen
 
 
      subplot(3,4,1);
-image1 = imagesc(KX,KZ, Illumi_ideal );
+image1 = imagesc(KX,KZ, real(Illumi_ideal) );
     colormap(jet)
     title("Rear Pupil Illumination of ideal Lattice, " +...
           "N_{xz} = " + num2str(Nxz) + ...
@@ -226,13 +231,15 @@ image12 = plot( KZ, OTF_dither);
 
 %% Propagator
 tic
+% gauss_back_pipil = exp(-2 * (kx.^2 + kz.^2) / (0.21/n*k_wave)^2);
 
 I_prop = zeros(Nxz,Nxz,Ny);
 Ein = Pupil_fun_exc;
 for i = 1:length(y)
     propagator = exp(2*pi * 1i * ky * y(i));
-    Eout = fftshift(fft2((Ein .* propagator)));
-    I_prop(:,:,i) = abs(Eout.^2);
+    Eout = fftshift(ifft2((Ein .* propagator)));
+
+    I_prop(:,:,i) = abs(Eout).^2;
 end  
 I_prop = I_prop/max(max(max(I_prop)));
 toc
@@ -257,8 +264,9 @@ fig2 = figure(2);
     colormap(jet)
 
     % plot xz
-    subplot(3,4,1:2);
+
     slice = 1; % focal plane
+    
 image13 = imagesc(X,Z, squeeze(I_prop(:,:,slice)));
     title("xz plane, " + "Y = " + num2str(y(slice)) +...
           ", NA_{max} = " + num2str(NAmax) + ...
@@ -266,11 +274,12 @@ image13 = imagesc(X,Z, squeeze(I_prop(:,:,slice)));
     xlabel("x/\lambda")
     ylabel("z/\lambda")
     colorbar
+    axis image
 
     % plot yz profile
-    subplot(3,4,3)
+figure(3)
     slice = (Nxz+1)/2;
-image14 = plot(y,squeeze(I_prop(slice,slice,:)));
+image14 = plot(Y,squeeze(I_prop(slice,slice,:)));
     title("PSF-yz, " + ...
           "X = " + num2str(X(slice)) + ...
           ", Z = " + num2str(Z(slice))  )
@@ -289,10 +298,10 @@ image14 = plot(y,squeeze(I_prop(slice,slice,:)));
 %     colorbar
 %     axis image;
 
+figure(4)
     % plot yz
-    subplot(3,4,5:6)
     slice = (Nxz+1)/2; 
-image16 = imagesc(y,Z, squeeze(I_prop(:,slice,:)));
+image16 = imagesc(Y,Z, squeeze(I_prop(:,slice,:)));
     title("yz plane, " + "X = " + num2str(X(slice)) )
     xlabel("y/\lambda")
     ylabel("z/\lambda")
