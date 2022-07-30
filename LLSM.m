@@ -1,187 +1,251 @@
 clear all
 close all
 
-%% Desired Lattice
+%% Physical parameters
  theta = [30, 90, 150, 210, 270, 330]; % hexogonal
 % theta = [30, 150, 210, 330]; % square
 % theta = [90, 270]; % standing wave
 
+weighting =  [1, 1, 1, 1, 1, 1]; % beam weighting
+
 % Physical Parameter 
-Nxz = 513; % pixels
-Ny = 513; % pixels
+N = 513; % pixels
 n = 1.33;
 lambda_exc = 0.488; % um 
 lambda_dect = 0.488;
 wavelength_exc =  lambda_exc / n;
 wavelength_dect = lambda_dect / n;
-NAmin = 0.36;
-NAmax = 0.46;
-NAdect = 1.0;
+NAmin = 0.57;
+NAmax = 0.65;
+NAdect = 1.1;
 NAideal = (NAmin + NAmax)/2;
 dither_period = 5; % um
 dither_step = 201; % number of s teps per dither period 
-gauss_bound_width = 5; % Gaussian Bounding, um
-xz_scale = 2;
-y_scale = 2;
+gauss_bound_width = 3; % Gaussian Bounding, um
+xz_scale = 4;
+y_scale = 4;
 
 k_wave = 1/wavelength_exc;
 k_ideal = k_wave * NAideal / n;
+k_dect = k_wave * NAdect / n;
 k_bound = xz_scale * k_wave;
-deltak = 2 * k_bound / Nxz;
+k_NAmax = NAmax /n * k_wave; % k
+k_NAmin = NAmin /n * k_wave; 
+deltak = 2 * k_bound / N;
 deltax = 1/(2 * k_bound);
 
-[ax, az] = meshgrid(  -(Nxz-1)/2 : (Nxz-1)/2 ) ; 
-kx = deltak * ax;  %in unit wavelength
-kz = kx';
-ky = sqrt(k_wave^2 - kx.^2 - kz.^2);
+% excitation
+[ax, az] = meshgrid(  -(N-1)/2 : (N-1)/2 ) ; 
+kx_exc = deltak * ax;  %in unit wavelength
+kz_exc = kx_exc';
+ky_exc = sqrt(k_wave^2 - kx_exc.^2 - kz_exc.^2);
+ky_exc(kx_exc.^2 + kz_exc.^2 > k_wave.^2 ) = 0;
+x_exc = deltax * ax; 
+z_exc = x_exc'; 
+y_exc = (-(N+1)/2+1 : (N+1)/2-1) * deltax * y_scale; % max(y) = FOVy 
 
-ky(kx.^2 + kz.^2 > k_wave.^2 ) = 0;
+% detection
+kx_det = kx_exc;
+ky_det = kz_exc;
+kz_det = ky_exc;
+x_det = x_exc;
+y_det = z_exc;
+z_det = (-(N+1)/2+1 : (N+1)/2-1) * deltax * y_scale;
 
-x = deltax * ax; 
-z = x'; 
-y = (0:Ny) * deltax * y_scale; % max(y) = FOVy 
+% for displaying
+KX_exc = kx_exc(1,:) / k_wave;
+KZ_exc = KX_exc';
+X_exc = x_exc(1,:)  / wavelength_exc; % value * wavelength = physical value (um)
+Z_exc = X_exc'; 
+Y_exc = y_exc / wavelength_exc; 
 
-KX = kx(1,:) / k_wave;
-KZ = KX';
+KX_dect = KX_exc;
+KY_dect = KZ_exc;
+X_dect = X_exc;
+Y_dect = Z_exc;
+Z_dect = Y_exc;
 
-X = x(1,:)  / wavelength_exc; % value * wavelength = physical value (um)
-Z = X'; 
-Y = y / wavelength_exc; 
-
-% Generate Ideal lattice 
+%% Simulation 
+% Generate Ideal lattice back pupil 
 Illumi_ideal = zeros(size(ax));
-
 kxposition = k_ideal * cosd(theta) /deltak; % pixel
 kzposition = k_ideal * sind(theta) /deltak; % pixel
 
-weighting =  [ exp(1i * pi/2),1,1,1,1,1];
-
-% Ideal lattice illumination
 for j = 1:length(kxposition)
 
     Illumi_ideal( ...
-        (Nxz+1)/2 + round(kzposition(j)) ,...
-        (Nxz+1)/2 + round(kxposition(j)) ) = 1 * weighting(j);
+        (N+1)/2 + round(kzposition(j)) ,...
+        (N+1)/2 + round(kxposition(j)) ) = 1 * weighting(j);
+end
+E_ideal = ifft2(Illumi_ideal); 
+
+% bounded lattice 
+gauss_bound = exp(-2 * z_exc.^2 / (gauss_bound_width)^2);
+E_bound = gauss_bound .* E_ideal;
+
+% bounded back pupil
+Illum_bound = abs(fft2(fftshift(E_bound))).^2;
+Illum_bound = Illum_bound/max(max(Illum_bound));
+
+% Generate mask 
+A_mask = ((k_NAmax > sqrt(kx_exc.^2 + kz_exc.^2)) .* (k_NAmin < sqrt(kx_exc.^2 + kz_exc.^2)));
+
+% Pupil functions
+Pupil_fun_exc = Illum_bound .* A_mask;
+Pupil_fun_det = k_dect > sqrt(kx_det.^2 + ky_det.^2);
+
+% % Propagation
+tic
+PSF_exc_3d = zeros(N,N, N);
+OTF_exc_3d = zeros(N,N, N);
+OTF_exc_3d_phase = zeros(N,N, N);
+PSF_exc_3d_dither = zeros(N,N, N);
+OTF_exc_3d_dither = zeros(N,N, N);
+OTF_exc_3d_dither_phase = zeros(N,N, N);
+PSF_det_3d = zeros(N,N,N);
+OTF_det_3d = zeros(N,N,N);
+
+% excitation propagation
+for i = 1:length(y_exc)
+    propagator_exc = exp(2*pi * 1i * ky_exc * y_exc(i));
+    PSF_exc_3d(:,:,i) = abs( fftshift( ifft2(Pupil_fun_exc .* propagator_exc) ) ).^2;
+    OTF_exc_3d(:,:,i) = abs(fftshift(fft2(PSF_exc_3d(:,:,i))));
+    OTF_exc_3d_phase(:,:,i) = angle(OTF_exc_3d(:,:,i));
+end  
+
+% detection propagation
+for ii = 1:length(z_det)
+    propagator_dect = exp(2*pi * 1i * kz_det * z_det(ii));
+    PSF_det_3d(:,:,ii) = abs( fftshift( ifft2(Pupil_fun_det .* propagator_dect) ) ).^2;
+    OTF_det_3d(:,:,ii) = abs(fftshift(fft2(PSF_det_3d(:,:,ii))));
 end
 
-% Ideal lattice
-E_ideal = ifft2(fftshift(Illumi_ideal)); % no need to shift since already at center
+% dithering along x exc
+for j = 1:dither_step
+    PSF_exc_3d_dither = PSF_exc_3d_dither + ...
+        circshift(PSF_exc_3d,round(j * dither_period / deltax / dither_step),2);
+end
 
+for k = 1:length(y_exc)
+    OTF_exc_3d_dither(:,:,k) = abs(fftshift(fft2(PSF_exc_3d_dither(:,:,k))));
+    OTF_exc_3d_dither_phase(:,:,k) = angle( OTF_exc_3d_dither(:,:,k) );
+end
+
+% Overall 
+Overall_PSF_axial = squeeze(PSF_exc_3d(:,:,(N+1)/2)) .* squeeze(PSF_det_3d(:,(N+1)/2,:))' ; 
+Overall_PSF_lateral = squeeze(PSF_exc_3d(:,:,(N+1)/2)) .* squeeze(PSF_det_3d(:,:,(N+1)/2));
+Overall_OTF_axial = abs(fftshift(fft2(Overall_PSF_axial)));
+Overall_OTF_lateral =  abs(fftshift(fft2(Overall_PSF_lateral)));
+
+% Normalize
+PSF_exc_3d = PSF_exc_3d/max(max(max(PSF_exc_3d)));
+OTF_exc_3d = OTF_exc_3d/max(max(max(OTF_exc_3d)));
+PSF_exc_3d_dither = PSF_exc_3d_dither/max(max(max(PSF_exc_3d_dither)));
+OTF_exc_3d_dither = OTF_exc_3d_dither/max(max(max(OTF_exc_3d_dither)));
+PSF_det_3d = PSF_det_3d/max(max(max(PSF_det_3d)));
+OTF_det_3d = OTF_det_3d/max(max(max(OTF_det_3d)));
+Overall_PSF_axial = Overall_PSF_axial/max(max(Overall_PSF_axial));
+Overall_PSF_lateral = Overall_PSF_lateral/max(max(Overall_PSF_lateral));
+Overall_OTF_axial = Overall_OTF_axial/max(max(Overall_OTF_axial));
+Overall_OTF_lateral = Overall_OTF_lateral/max(max(Overall_OTF_lateral));
+toc
+
+%% Figure 1 - Rear Pupil 
+    fig1 = figure(1);
+    fig1.Name = "XZ-excitation, Y = 0";
+    colormap(hot(256))
 
      subplot(3,4,1);
-image1 = imagesc(KX,KZ, real(Illumi_ideal) );
-    colormap(jet)
-    title("Rear Pupil Illumination of ideal Lattice, " +...
-          "N_{xz} = " + num2str(Nxz) + ...
-          ", K_{bound} = " + num2str(k_bound))
+image11 = imagesc(KX_exc,KZ_exc, real(Illumi_ideal) );
+    title("Ideal Lattice, " +...
+          "N_{xz} = " + num2str(N) + ...
+          ", K_{bound} = " + num2str(k_bound) + " (1/um)")
     xlabel("kx * \lambda")
     ylabel("kz * \lambda")
-%     image1.Parent.XLim = [-xz_scale/2, xz_scale/2];
-%     image1.Parent.YLim = [-xz_scale/2, xz_scale/2];
+    axis image
+    image11.Parent.XLim = [-1,1];
+    image11.Parent.YLim = [-1,1];
     colorbar;    
 
     subplot(3,4,2);
-image2 = imagesc(X,Z, abs( E_ideal));
+image12 = imagesc(X_exc,Z_exc, abs( E_ideal));
     title("Ideal Lattice," + ...
-          "\lambda_{exc}/n = " + num2str(wavelength_exc, '%.3f') + "um" + ...
-          " , n = " + num2str(n))
+          "\lambda_{exc}/n = " + num2str(lambda_exc, '%.3f') + "um / " + ...
+           num2str(n))
     xlabel("x/\lambda")
     ylabel("z/\lambda")
+    axis image
     colorbar;
-    
-
-% Gaussian Bounding and get rear pupil illum back
-
-gauss_bound = exp(-2 * z.^2 / (gauss_bound_width)^2);
-E_bound = gauss_bound .* E_ideal;
 
     subplot(3,4,3);
-image3 = imagesc(X, Z, abs(E_bound));
+image13 = imagesc(X_exc, Z_exc, abs(E_bound));
     title("Bounded Ideal Lattice, " + ...
           "Bound width = " + num2str(gauss_bound_width) + "um")
     xlabel("x/\lambda")
     ylabel("z/\lambda")
+    axis image
     colorbar;
     
-
-Illum_bound = abs(ifftshift(fft2(ifftshift(E_bound)))).^2;
-Illum_bound = Illum_bound/max(max(Illum_bound));
-
     subplot(3,4,4)
-image4 = imagesc( KX, KZ,...
+image14 = imagesc( KX_exc, KZ_exc,...
                   Illum_bound );
     title("Rear pupil illumination after bounding")
     xlabel("kx * \lambda")
     ylabel("kz * \lambda")
-%     image4.Parent.XLim = [-xz_scale/2, xz_scale/2];
-%     image4.Parent.YLim = [-xz_scale/2, xz_scale/2];
+    axis image
+    image14.Parent.XLim = [-1,1];
+    image14.Parent.YLim = [-1,1];
     colorbar;
-    
 
-% Generate mask and filter
-k_NAmax = NAmax /n * k_wave; % k
-k_NAmin = NAmin /n * k_wave; 
-
-% create mask
-A_mask = ((k_NAmax > sqrt(kx.^2 + kz.^2)) .* (k_NAmin < sqrt(kx.^2 + kz.^2)));
 Illum_mask = imfuse(Illum_bound,A_mask,"falsecolor","ColorChannels","green-magenta");
     subplot(3,4,5)
-image5 = imagesc( KX, KZ,...
+image15 = imagesc( KX_exc, KZ_exc,...
                   Illum_mask);
     title("Masking, " +...
           "NA_{max} = " + num2str(NAmax) +...
           ", NA_{min} = " + num2str(NAmin) )
     xlabel("kx * \lambda")
     ylabel("kz * \lambda")
-    axis image;
+    axis image
+    image15.Parent.XLim = [-1,1];
+    image15.Parent.YLim = [-1,1];
 
-% Create pupil function    
-Pupil_fun_exc = Illum_bound;
     subplot(3,4,6)
-image6 = imagesc( KX, KZ,...
+image16 = imagesc( KX_exc, KZ_exc,...
                   Pupil_fun_exc );
+    title("Bounded Rear Pupil")
     xlabel("kx * \lambda")
     ylabel("kz * \lambda")
+    axis image
+    image16.Parent.XLim = [-1,1];
+    image16.Parent.YLim = [-1,1];
     colorbar;
-    axis image;
 
-
-% PSF and OTF
-PSF_exc = abs( fftshift(ifft2(Pupil_fun_exc)) ).^2;
-PSF_exc = PSF_exc/max(max(PSF_exc));
     subplot(3,4,7)
-image7 = imagesc(X, Z, PSF_exc);
-    title("Excitation PSF")
+image17 = imagesc(X_exc, Z_exc, PSF_exc_3d(:,:,(N+1)/2));
+    title("XZ-Excitation PSF")
     xlabel("x/\lambda")
     ylabel("z/\lambda")
     colorbar;
     axis image;
 
-% OTF
-OTF_exc = abs(fftshift(fft2(PSF_exc)));
-OTF_exc = OTF_exc/max(max(OTF_exc));
     subplot(3,4,8)
-image8 = imagesc( KX,...
-                  KZ,...
-                  OTF_exc ) ;
-    title("Excitation OTF")
+image18 = imagesc( KX_exc,...
+                  KZ_exc,...
+                  OTF_exc_3d(:,:,(N+1)/2) ) ;
+    title("XZ-Excitation OTF")
     xlabel("kx * \lambda")
     ylabel("kz * \lambda")
     colorbar;
-    axis image;
+    axis image
+    image18.Parent.XLim = [-1,1];
+    image18.Parent.YLim = [-1,1];
 
-% Dither 
-PSF_exc_dither = PSF_exc;
-for j = 1:dither_step
-    PSF_exc_dither = PSF_exc_dither + ...
-                     circshift(PSF_exc,round(j * dither_period / deltax / dither_step),2)/2;
-end
-PSF_exc_dither = PSF_exc_dither / max(max(PSF_exc_dither));
 
     subplot(3,4,9)
     hold on;
-image9 = imagesc(X, Z ,PSF_exc_dither);
-    title("Dithered Excitation PSF, " + ...
+image19 = imagesc(X_exc, Z_exc ,PSF_exc_3d_dither(:,:,(N+1)/2));
+    title("Dithered XZ-Excitation PSF, " + ...
           "T_d = " + num2str(dither_period) + "um, " +...
           "Dither Step = " + num2str(dither_step))
     xlabel("x/\lambda")
@@ -190,173 +254,195 @@ image9 = imagesc(X, Z ,PSF_exc_dither);
     axis image;
 
     subplot(3,4,10)
-PSF_exc_dither_profile = PSF_exc_dither(:,(Nxz+1)/2);
-PSF_exc_dither_profile = PSF_exc_dither_profile/max(max(PSF_exc_dither_profile));
-image10 = plot( Z, PSF_exc_dither_profile);
-    title("PSF Dithered Line Profile")
+image110 = plot( Z_exc, squeeze(PSF_exc_3d_dither(:,(N+1)/2,(N+1)/2)));
+    title("Dithered Z-Excitation PSF")
     ylabel("Normalized a.u. ")
     xlabel("z/\lambda")
-    image10.LineWidth = 2;
-    image10.Color = 'r';
-    image10.Parent.YAxis.TickValues = linspace(0,1,11);
+    image110.LineWidth = 2;
+    image110.Color = 'r';
+    image110.Parent.YAxis.TickValues = linspace(0,1,11);
+    image110.Parent.XLim = [-15,15];
     grid on
 
-% Dither OTF 
-OTF_dither = abs(fftshift(fft2(PSF_exc_dither)));
-OTF_dither = OTF_dither/max(max(OTF_dither));
-
     subplot(3,4,11)
-    hold on
-image11 = imagesc( KX,...
-                   KZ,...
-                   OTF_dither  );
-    title("Dithered Excitation OTF")
+image111 = imagesc( KX_exc,...
+                   KZ_exc,...
+                   OTF_exc_3d_dither(:,:,(N+1)/2)  );
+    title("Dithered XZ-Excitation OTF")
     xlabel("kx * \lambda")
     ylabel("kz * \lambda")
     colorbar;
-    axis image; 
+    axis image
+    image111.Parent.XLim = [-1,1];
+    image111.Parent.YLim = [-1,1];
 
     subplot(3,4,12)
-OTF_dither = OTF_dither(:,(Nxz+1)/2);
-OTF_dither = OTF_dither/max(max(OTF_dither));
-image12 = plot( KZ, OTF_dither);
-    title("OTF Dithered Line Profile, " + ...
+image112 = plot( KZ_exc, squeeze(OTF_exc_3d_dither(:,(N+1)/2,(N+1)/2)));
+    title("Dithered XZ-Excitation OTF, " + ...
         "K_x = " + num2str(0) )
     ylabel("Normalized a.u. ")
     xlabel("kz * \lambda")
-    image12.LineWidth = 2;
-    image12.Color = 'r';
-    image12.Parent.YAxis.TickValues = linspace(0,1,11);
+    image112.LineWidth = 2;
+    image112.Color = 'r';
+    image112.Parent.XLim = [-2,2];
+    image112.Parent.YAxis.TickValues = linspace(0,1,11);
     grid on
 
-%% Propagator
-tic
-% gauss_back_pipil = exp(-2 * (kx.^2 + kz.^2) / (0.21/n*k_wave)^2);
+%% Figure 2 - Excitation
+    fig2 = figure(2);
+    fig2.Name = "Focal PSF/OTF";
+    colormap(hot(256))
 
-I_prop = zeros(Nxz,Nxz,Ny);
-Ein = Pupil_fun_exc;
-for i = 1:length(y)
-    propagator = exp(2*pi * 1i * ky * y(i));
-    Eout = fftshift(ifft2((Ein .* propagator)));
-
-    I_prop(:,:,i) = abs(Eout).^2;
-end  
-I_prop = I_prop/max(max(max(I_prop)));
-toc
-
-% %% Detection
-% Pupil_fun_dect = k_dect_ideal > sqrt(kxdect.^2 + kydect.^2);
-% 
-% % detection PSF
-% PSF_dect = abs( fftshift(fft2(Pupil_fun_dect)) ).^2;
-% PSF_dect = PSF_dect/max(max(PSF_dect));
-% PSF_dect_profile = PSF_dect(:,(Nxz+1)/2);
-% PSF_dect_profile = PSF_dect_profile/max(max(PSF_dect_profile));
-% 
-% % detection OTF
-% OTF_dect = abs(fftshift(fft2(PSF_dect)));
-% OTF_dect = OTF_dect/max(max(OTF_dect));
-% OTF_dect_profile = OTF_dect(:,(Nxz+1)/2);
-% OTF_dect_profile = OTF_dect_profile/max(max(OTF_dect_profile));
-
-%% Ploting
-fig2 = figure(2);
-    colormap(jet)
-
-    % plot xz
-
-    slice = 1; % focal plane
-    
-image13 = imagesc(X,Z, squeeze(I_prop(:,:,slice)));
-    title("xz plane, " + "Y = " + num2str(y(slice)) +...
-          ", NA_{max} = " + num2str(NAmax) + ...
-          ", NA_{min} = " + num2str(NAmin) )
+     subplot(2,3,1);
+image21 = imagesc(X_exc,Z_exc,PSF_exc_3d(:,:,(N+1)/2) );
+    title("XZ-Excitation PSF, "  + "Y = 0")
     xlabel("x/\lambda")
     ylabel("z/\lambda")
-    colorbar
-    axis image
+    colorbar;
+    axis image;
 
-    % plot yz profile
-figure(3)
-    slice = (Nxz+1)/2;
-image14 = plot(Y,squeeze(I_prop(slice,slice,:)));
-    title("PSF-yz, " + ...
-          "X = " + num2str(X(slice)) + ...
-          ", Z = " + num2str(Z(slice))  )
-    xlabel("y/\lambda")
+    subplot(2,3,2);
+image22 = imagesc(X_exc,Z_exc,PSF_exc_3d_dither(:,:,(N+1)/2));
+     title("Dithered XZ-Excitation PSF, " + ...
+          "T_d = " + num2str(dither_period) + "um, " +...
+          "Step = " + num2str(dither_step) + ...
+          ", Y = 0")
+    xlabel("x/\lambda")
+    ylabel("z/\lambda")
+    axis image
+    colorbar;
+    
+    subplot(2,3,3);
+image23 = plot( KZ_exc, OTF_exc_3d(:,(N+1)/2,(N+1)/2));
+    title("Z-Excitation-OTF, " + "K_X = 0, " + "K_Y = 0")
     ylabel("Normalized a.u. ")
-    image14.Color = 'r';
-    image14.LineWidth = 2;
+    xlabel("kz * \lambda")
+    image23.Color = 'r';
+    image23.LineWidth = 2;
+    image23.Parent.XLim = [-2,2];
+    colorbar;
     grid on
 
-%     % plot detection pupil func
-%     subplot(3,4,4)
-% image15 = imagesc(KXdect, Kbound, Pupil_fun_dect);
-%     title("Detection PSF, " + "NA = " + num2str(NAdect))
-%     xlabel("kx * \lambda")
-%     ylabel("ky * \lambda")
-%     colorbar
-%     axis image;
-
-figure(4)
-    % plot yz
-    slice = (Nxz+1)/2; 
-image16 = imagesc(Y,Z, squeeze(I_prop(:,slice,:)));
-    title("yz plane, " + "X = " + num2str(X(slice)) )
+    subplot(2,3,4);
+image24 = imagesc(Y_exc, Z_exc, squeeze(PSF_exc_3d(:,(N+1)/2,:)));
+    title("YZ-Excitation-PSF, " + "X = 0" )
     xlabel("y/\lambda")
     ylabel("z/\lambda")
     colorbar
-    axis image
 
-%     % plot detection PSF
-%     subplot(3,4,7)
-% image17 = imagesc(Xdect, Ydect, PSF_dect);
-%     title("Detection PSF")
-%     xlabel("x/\lambda")
-%     ylabel("y/\lambda")
-%     colorbar;
-%     axis image;  
-%     image17.Parent.XLim = [-10,10];
-%     image17.Parent.YLim = [-10,10];
-% 
-%     % plot PSF line profile
-%     subplot(3,4,8)
-% image18 = plot(Ydect, PSF_dect_profile);
-%     title("PSF_{dect} profile, " + ...
-%           "X = " + num2str(0) )
-%     xlabel("y/\lambda")
-%     ylabel("Normalized a.u. ")
-%     image18.Color = 'r';
-%     image18.LineWidth = 2;
-%     image18.Parent.XLim = [-10,10];
-%     grid on
-%     
-%     % plot xy
-%     subplot(3,4,9:10)
-%     slice = (Nxz+1)/2;
-% image19 = imagesc(Y,X,squeeze(I_prop(slice,:,:)));
-%     title("xy plane, " + "Z = " + num2str(Z(slice)))
-%     xlabel("y/\lambda")
-%     ylabel("x/\lambda")
-%     colorbar
-% 
-%     % plot detection OTF
-%     subplot(3,4,11)
-% image17 = imagesc(KXdect, KYdect, OTF_dect);
-%     title("Detection OTF")
-%     xlabel("kx * \lambda")
-%     ylabel("ky * \lambda")
-%     colorbar;
-%     axis image;  
-% 
-%     % plot OTF line profile
-%     subplot(3,4,12)
-% image18 = plot(KYdect, OTF_dect_profile);
-%     title("OTF_{dect} profile, " + ...
-%           "KX = " + num2str(0) )
-%     xlabel("ky * \lambda")
-%     ylabel("Normalized a.u. ")
-%     image18.Color = 'r';
-%     image18.LineWidth = 2;
-%     image18.Parent.XLim = [-0.5 0.5];
-%     grid on
+    subplot(2,3,5);
+image25 = imagesc(Y_exc,Z_exc, squeeze(PSF_exc_3d_dither(:,(N+1)/2,:)) );
+    title("Dithered YZ-Excitation-PSF, " + "X = 0" )
+    xlabel("y/\lambda")
+    ylabel("z/\lambda")
+    colorbar;
+
+    subplot(2,3,6);
+    yPSF_exc = squeeze(PSF_exc_3d((N+1)/2,(N+1)/2,:));
+    % Calculate yFWHM
+    index = find(yPSF_exc >= 0.5);
+    yFWHM = Y_exc(index(end)) - Y_exc(index(1)); % pixels
+image26 = plot(Y_exc, yPSF_exc );
+    title("Y-Excitation-PSF, " + "X = 0, Z = 0, " + ...
+          "yFWHM = " + num2str(yFWHM) + "\lambda")
+    xlabel("y/\lambda")
+    ylabel("Normalized a.u. ")
+    image26.Color = 'r';
+    image26.LineWidth = 2;
+    colorbar;
+    grid on
+    
+%% Figure 3 - Overall PSF/OTF
+    fig3 = figure(3);  
+    fig3.Name = "Overall XZ-Axial PSF/OTF, focal plane";
+    colormap(hot(256))
+        
+    subplot(2,4,1)
+image31 = imagesc(X_exc,Z_exc,PSF_exc_3d_dither(:,:,(N+1)/2) );
+    title("Dithered XZ-Excitation PSF")
+    xlabel("x/\lambda")
+    ylabel("z/\lambda")
+    colorbar;
+    axis image;
+
+    subplot(2,4,2)
+ image32 = imagesc(X_exc,Z_exc,squeeze(PSF_det_3d(:,(N+1)/2,:))');
+    title("XZ-Detection PSF ")
+    xlabel("x/\lambda")
+    ylabel("z/\lambda")
+    colorbar;
+    axis image;  
+    image32.Parent.XLim = [-2,2];
+    image32.Parent.YLim = [-2,2];
+
+    subplot(2,4,3)
+ image33 = imagesc(X_exc,Z_exc,Overall_PSF_axial);
+    title("Overall PSF")
+    xlabel("x/\lambda")
+    ylabel("z/\lambda")
+    colorbar;
+    axis image;  
+    image33.Parent.XLim = [-2,2];
+    image33.Parent.YLim = [-2,2];
+
+    subplot(2,4,5)
+image35 = imagesc(KX_exc,...
+                  KZ_exc,...
+                  OTF_exc_3d(:,:,(N+1)/2) );
+    title("XZ-Excitation OTF ")
+    xlabel("kx * \lambda")
+    ylabel("kz * \lambda")
+    colorbar;
+    axis image;
+    image35.Parent.XLim = [-2,2];
+    image35.Parent.YLim = [-2,2];
+
+    subplot(2,4,6)
+ image36 = imagesc(KX_exc,...
+                  KZ_exc,...
+                  OTF_det_3d(:,:,(N+1)/2));
+    title("XZ-Detection OTF ")
+    xlabel("kx * \lambda")
+    ylabel("kz * \lambda")
+    colorbar;
+    axis image;  
+    image36.Parent.XLim = [-2,2];
+    image36.Parent.YLim = [-2,2];
+
+    subplot(2,4,7)
+ image37 = imagesc(X_exc,Z_exc,Overall_OTF_axial);
+    title("Overall OTF")
+    xlabel("kx * \lambda")
+    ylabel("kz * \lambda")
+    colorbar;
+    axis image;  
+    image37.Parent.XLim = [-20,20];
+    image37.Parent.YLim = [-20,20];
+
+    h1 = subplot(2,4,[4,8]);
+    hold on
+line_exc = plot(squeeze(PSF_exc_3d_dither(:,(N+1)/2,(N+1)/2)),Z_exc);
+    line_exc.Color = 'g';
+    line_exc.LineWidth = 2;
+line_det = plot(squeeze(PSF_det_3d((N+1)/2,(N+1)/2,:)),Z_exc);
+    line_det.Color = 'b';
+    line_det.LineWidth = 2;
+line_overall = plot(squeeze(Overall_PSF_axial(:,(N+1)/2)),Z_exc);
+    line_overall.Color = 'r';
+    line_overall.LineWidth = 2;
+line_lateral = plot(squeeze(PSF_det_3d(:,(N+1)/2,(N+1)/2)),Z_exc);
+    line_lateral.Color = 'k';
+    line_lateral.LineWidth = 2;
+    title("Overall Axial-PSF")
+    ylabel("z/\lambda")
+    xlabel("Normalized a.u. ")
+    lgd = legend("Excitation", "Detection","Overall","Lateral-xPSF");  
+        lgd.FontWeight = 'bold';
+        lgd.FontSize = 7;
+        lgd.LineWidth = 1;
+    h1.YLim = [-6,6];
+    h1.YTick = linspace(-6,6,13);
+    grid on
+    hold off
+
+    
