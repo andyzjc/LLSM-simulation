@@ -15,9 +15,9 @@ lambda_exc = 0.488; % um
 lambda_dect = 0.488;
 wavelength_exc =  lambda_exc / n;
 wavelength_dect = lambda_dect / n;
-NAmin = 0.57;
-NAmax = 0.65;
-NAdect = 1.1;
+NAmin = 0.50;
+NAmax = 0.60;
+NAdet = 1.1;
 NAideal = (NAmin + NAmax)/2;
 dither_period = 5; % um
 dither_step = 201; % number of s teps per dither period 
@@ -27,7 +27,7 @@ y_scale = 4;
 
 k_wave = 1/wavelength_exc;
 k_ideal = k_wave * NAideal / n;
-k_dect = k_wave * NAdect / n;
+k_det = k_wave * NAdet / n;
 k_bound = xz_scale * k_wave;
 k_NAmax = NAmax /n * k_wave; % k
 k_NAmin = NAmin /n * k_wave; 
@@ -92,7 +92,7 @@ A_mask = ((k_NAmax > sqrt(kx_exc.^2 + kz_exc.^2)) .* (k_NAmin < sqrt(kx_exc.^2 +
 
 % Pupil functions
 Pupil_fun_exc = Illum_bound .* A_mask;
-Pupil_fun_det = k_dect > sqrt(kx_det.^2 + ky_det.^2);
+Pupil_fun_det = k_det > sqrt(kx_det.^2 + ky_det.^2);
 
 % % Propagation
 tic
@@ -412,7 +412,7 @@ image35 = imagesc(KX_exc,...
     subplot(2,4,7)
  image37 = imagesc(X_exc,Z_exc,Overall_OTF_axial);
     title("Overall OTF")
-    xlabel("kx * \lambda")
+    xlabel("kx * \la5mbda")
     ylabel("kz * \lambda")
     colorbar;
     axis image;  
@@ -430,13 +430,13 @@ line_det = plot(squeeze(PSF_det_3d((N+1)/2,(N+1)/2,:)),Z_exc);
 line_overall = plot(squeeze(Overall_PSF_axial(:,(N+1)/2)),Z_exc);
     line_overall.Color = 'r';
     line_overall.LineWidth = 2;
-line_lateral = plot(squeeze(PSF_det_3d(:,(N+1)/2,(N+1)/2)),Z_exc);
-    line_lateral.Color = 'k';
-    line_lateral.LineWidth = 2;
+% line_lateral = plot(squeeze(PSF_det_3d(:,(N+1)/2,(N+1)/2)),Z_exc);
+%     line_lateral.Color = 'k';
+%     line_lateral.LineWidth = 2;
     title("Overall Axial-PSF")
     ylabel("z/\lambda")
     xlabel("Normalized a.u. ")
-    lgd = legend("Excitation", "Detection","Overall","Lateral-xPSF");  
+    lgd = legend("Excitation", "Detection","Overall");  
         lgd.FontWeight = 'bold';
         lgd.FontSize = 7;
         lgd.LineWidth = 1;
