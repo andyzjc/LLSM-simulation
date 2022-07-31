@@ -12,18 +12,18 @@ weighting =  [1, 1, 1, 1, 1, 1]; % beam weighting
 N = 513; % pixels
 n = 1.33;
 lambda_exc = 0.488; % um 
-lambda_dect = 0.488;
+lambda_det = 0.488;
 wavelength_exc =  lambda_exc / n;
-wavelength_dect = lambda_dect / n;
-NAmin = 0.50;
-NAmax = 0.60;
+wavelength_det = lambda_det / n;
+NAmin = 0.57;
+NAmax = 0.65;
 NAdet = 1.1;
 NAideal = (NAmin + NAmax)/2;
-dither_period = 5; % um
+dither_period = 3; % um
 dither_step = 201; % number of s teps per dither period 
-gauss_bound_width = 3; % Gaussian Bounding, um
+gauss_bound_width = 1; % Gaussian Bounding, um
 xz_scale = 4;
-y_scale = 4;
+y_scale = 2;
 
 k_wave = 1/wavelength_exc;
 k_ideal = k_wave * NAideal / n;
@@ -42,7 +42,7 @@ ky_exc = sqrt(k_wave^2 - kx_exc.^2 - kz_exc.^2);
 ky_exc(kx_exc.^2 + kz_exc.^2 > k_wave.^2 ) = 0;
 x_exc = deltax * ax; 
 z_exc = x_exc'; 
-y_exc = (-(N+1)/2+1 : (N+1)/2-1) * deltax * y_scale; % max(y) = FOVy 
+y_exc = (-(N+1)/2+1 : (N+1)/2-1) * deltax * y_scale; 
 
 % detection
 kx_det = kx_exc;
@@ -50,7 +50,7 @@ ky_det = kz_exc;
 kz_det = ky_exc;
 x_det = x_exc;
 y_det = z_exc;
-z_det = (-(N+1)/2+1 : (N+1)/2-1) * deltax * y_scale;
+z_det = y_exc;
 
 % for displaying
 KX_exc = kx_exc(1,:) / k_wave;
@@ -59,11 +59,11 @@ X_exc = x_exc(1,:)  / wavelength_exc; % value * wavelength = physical value (um)
 Z_exc = X_exc'; 
 Y_exc = y_exc / wavelength_exc; 
 
-KX_dect = KX_exc;
-KY_dect = KZ_exc;
-X_dect = X_exc;
-Y_dect = Z_exc;
-Z_dect = Y_exc;
+KX_det = KX_exc;
+KY_det = KZ_exc;
+X_det = X_exc;
+Y_det = Z_exc;
+Z_det = Y_exc;
 
 %% Simulation 
 % Generate Ideal lattice back pupil 
@@ -103,9 +103,8 @@ PSF_exc_3d_dither = zeros(N,N, N);
 OTF_exc_3d_dither = zeros(N,N, N);
 OTF_exc_3d_dither_phase = zeros(N,N, N);
 PSF_det_3d = zeros(N,N,N);
-OTF_det_3d = zeros(N,N,N);
 
-% excitation propagation
+% propagation
 for i = 1:length(y_exc)
     propagator_exc = exp(2*pi * 1i * ky_exc * y_exc(i));
     PSF_exc_3d(:,:,i) = abs( fftshift( ifft2(Pupil_fun_exc .* propagator_exc) ) ).^2;
@@ -115,9 +114,8 @@ end
 
 % detection propagation
 for ii = 1:length(z_det)
-    propagator_dect = exp(2*pi * 1i * kz_det * z_det(ii));
-    PSF_det_3d(:,:,ii) = abs( fftshift( ifft2(Pupil_fun_det .* propagator_dect) ) ).^2;
-    OTF_det_3d(:,:,ii) = abs(fftshift(fft2(PSF_det_3d(:,:,ii))));
+    propagator_det = exp(2*pi * 1i * kz_det * z_det(ii));
+    PSF_det_3d(:,:,ii) = abs( fftshift( ifft2(Pupil_fun_det .* propagator_det) ) ).^2;
 end
 
 % dithering along x exc
@@ -128,12 +126,12 @@ end
 
 for k = 1:length(y_exc)
     OTF_exc_3d_dither(:,:,k) = abs(fftshift(fft2(PSF_exc_3d_dither(:,:,k))));
-    OTF_exc_3d_dither_phase(:,:,k) = angle( OTF_exc_3d_dither(:,:,k) );
+%     OTF_exc_3d_dither_phase(:,:,k) = angle( OTF_exc_3d_dither(:,:,k) );
 end
 
 % Overall 
 Overall_PSF_axial = squeeze(PSF_exc_3d(:,:,(N+1)/2)) .* squeeze(PSF_det_3d(:,(N+1)/2,:))' ; 
-Overall_PSF_lateral = squeeze(PSF_exc_3d(:,:,(N+1)/2)) .* squeeze(PSF_det_3d(:,:,(N+1)/2));
+Overall_PSF_lateral = squeeze(PSF_exc_3d(:,(N+1)/2,:)) .* squeeze(PSF_det_3d(:,:,(N+1)/2));
 Overall_OTF_axial = abs(fftshift(fft2(Overall_PSF_axial)));
 Overall_OTF_lateral =  abs(fftshift(fft2(Overall_PSF_lateral)));
 
@@ -143,7 +141,6 @@ OTF_exc_3d = OTF_exc_3d/max(max(max(OTF_exc_3d)));
 PSF_exc_3d_dither = PSF_exc_3d_dither/max(max(max(PSF_exc_3d_dither)));
 OTF_exc_3d_dither = OTF_exc_3d_dither/max(max(max(OTF_exc_3d_dither)));
 PSF_det_3d = PSF_det_3d/max(max(max(PSF_det_3d)));
-OTF_det_3d = OTF_det_3d/max(max(max(OTF_det_3d)));
 Overall_PSF_axial = Overall_PSF_axial/max(max(Overall_PSF_axial));
 Overall_PSF_lateral = Overall_PSF_lateral/max(max(Overall_PSF_lateral));
 Overall_OTF_axial = Overall_OTF_axial/max(max(Overall_OTF_axial));
@@ -254,7 +251,8 @@ image19 = imagesc(X_exc, Z_exc ,PSF_exc_3d_dither(:,:,(N+1)/2));
     axis image;
 
     subplot(3,4,10)
-image110 = plot( Z_exc, squeeze(PSF_exc_3d_dither(:,(N+1)/2,(N+1)/2)));
+    zPSF = squeeze(PSF_exc_3d_dither(:,(N+1)/2,(N+1)/2))/max(squeeze(PSF_exc_3d_dither(:,(N+1)/2,(N+1)/2)));
+image110 = plot( Z_exc, zPSF);
     title("Dithered Z-Excitation PSF")
     ylabel("Normalized a.u. ")
     xlabel("z/\lambda")
@@ -326,6 +324,7 @@ image23 = plot( KZ_exc, OTF_exc_3d(:,(N+1)/2,(N+1)/2));
     subplot(2,3,4);
 image24 = imagesc(Y_exc, Z_exc, squeeze(PSF_exc_3d(:,(N+1)/2,:)));
     title("YZ-Excitation-PSF, " + "X = 0" )
+    axis image
     xlabel("y/\lambda")
     ylabel("z/\lambda")
     colorbar
@@ -335,6 +334,7 @@ image25 = imagesc(Y_exc,Z_exc, squeeze(PSF_exc_3d_dither(:,(N+1)/2,:)) );
     title("Dithered YZ-Excitation-PSF, " + "X = 0" )
     xlabel("y/\lambda")
     ylabel("z/\lambda")
+    axis image
     colorbar;
 
     subplot(2,3,6);
@@ -366,14 +366,14 @@ image31 = imagesc(X_exc,Z_exc,PSF_exc_3d_dither(:,:,(N+1)/2) );
     axis image;
 
     subplot(2,4,2)
- image32 = imagesc(X_exc,Z_exc,squeeze(PSF_det_3d(:,(N+1)/2,:))');
+ image32 = imagesc(X_det,Z_det,squeeze(PSF_det_3d(:,(N+1)/2,:))');
     title("XZ-Detection PSF ")
     xlabel("x/\lambda")
     ylabel("z/\lambda")
     colorbar;
     axis image;  
-    image32.Parent.XLim = [-2,2];
-    image32.Parent.YLim = [-2,2];
+    image32.Parent.XLim = [-5,5];
+    image32.Parent.YLim = [-5,5];
 
     subplot(2,4,3)
  image33 = imagesc(X_exc,Z_exc,Overall_PSF_axial);
@@ -382,8 +382,8 @@ image31 = imagesc(X_exc,Z_exc,PSF_exc_3d_dither(:,:,(N+1)/2) );
     ylabel("z/\lambda")
     colorbar;
     axis image;  
-    image33.Parent.XLim = [-2,2];
-    image33.Parent.YLim = [-2,2];
+    image33.Parent.XLim = [-5,5];
+    image33.Parent.YLim = [-5,5];
 
     subplot(2,4,5)
 image35 = imagesc(KX_exc,...
@@ -398,9 +398,9 @@ image35 = imagesc(KX_exc,...
     image35.Parent.YLim = [-2,2];
 
     subplot(2,4,6)
- image36 = imagesc(KX_exc,...
+ image36 = imagesc(KX_det,...
                   KZ_exc,...
-                  OTF_det_3d(:,:,(N+1)/2));
+                  abs(fftshift(fft2(squeeze(PSF_det_3d(:,(N+1)/2,:))'))));
     title("XZ-Detection OTF ")
     xlabel("kx * \lambda")
     ylabel("kz * \lambda")
@@ -421,7 +421,7 @@ image35 = imagesc(KX_exc,...
 
     h1 = subplot(2,4,[4,8]);
     hold on
-line_exc = plot(squeeze(PSF_exc_3d_dither(:,(N+1)/2,(N+1)/2)),Z_exc);
+line_exc = plot(zPSF,Z_exc);
     line_exc.Color = 'g';
     line_exc.LineWidth = 2;
 line_det = plot(squeeze(PSF_det_3d((N+1)/2,(N+1)/2,:)),Z_exc);
