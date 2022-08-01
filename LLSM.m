@@ -22,7 +22,7 @@ NAideal = (NAmin + NAmax)/2;
 dither_period = 3; % um
 dither_step = 201; % number of s teps per dither period 
 gauss_bound_width = 1; % Gaussian Bounding, um
-xz_scale = 4;
+xz_scale = 2;
 y_scale = 2;
 
 k_wave = 1/wavelength_exc;
