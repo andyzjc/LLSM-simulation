@@ -1681,7 +1681,7 @@ function SaveResults
 
     saveas(Figures.fig1, savingdir + '/XZ-Excitation.png')
     saveas(Figures.fig2, savingdir + '/PSF-OTF.png')
-    saveas(Figures.fig3,savingdir + '/Overall.png')
+    saveas(Figures.fig3, savingdir + '/Overall.png')
     
     tic
 
@@ -1697,6 +1697,7 @@ function SaveResults
         h1.YAxis.FontSize = 15;
         h1.XAxis.FontWeight = 'bold';
         h1.YAxis.FontWeight = 'bold';
+        colormap(hot(256))
         colorbar;
         axis image;
 
@@ -1709,6 +1710,7 @@ function SaveResults
         h2.YAxis.FontSize = 15; 
         h2.XAxis.FontWeight = 'bold'; 
         h2.YAxis.FontWeight = 'bold'; 
+        colormap(hot(256))
         colorbar; 
         axis image; 
 
@@ -1757,7 +1759,7 @@ function SaveResults
         grid on;
 
         frame = getframe(Figures.fig4);
-        imwrite(frame2im(frame), savingdir + '/XZ-PSF-OTF.tif','WriteMode','append')
+        imwrite(frame2im(frame),hot, savingdir + '/XZ-PSF-OTF.tif','WriteMode','append')
     end
     toc
 
