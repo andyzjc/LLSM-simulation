@@ -15,13 +15,13 @@ lambda_exc = 0.488; % um
 lambda_det = 0.488;
 wavelength_exc =  lambda_exc / n;
 wavelength_det = lambda_det / n;
-NAmin = 0.57;
-NAmax = 0.65;
-NAdet = 1.1;
+NAmin = 0.5;
+NAmax = 0.6;
+NAdet = 1.0;
 NAideal = (NAmin + NAmax)/2;
 dither_period = 3; % um
 dither_step = 201; % number of s teps per dither period 
-gauss_bound_width = 1; % Gaussian Bounding, um
+gauss_bound_width = 3; % Gaussian Bounding, um
 xz_scale = 2;
 y_scale = 2;
 
@@ -311,15 +311,21 @@ image22 = imagesc(X_exc,Z_exc,PSF_exc_3d_dither(:,:,(N+1)/2));
     colorbar;
     
     subplot(2,3,3);
+    hold on
 image23 = plot( KZ_exc, OTF_exc_3d(:,(N+1)/2,(N+1)/2));
+phase1 = plot( KZ_exc, OTF_exc_3d_phase(:,(N+1)/2,(N+1)/2));
     title("Z-Excitation-OTF, " + "K_X = 0, " + "K_Y = 0")
     ylabel("Normalized a.u. ")
     xlabel("kz * \lambda")
     image23.Color = 'r';
     image23.LineWidth = 2;
     image23.Parent.XLim = [-2,2];
+    phase1.Color = 'g';
+    phase1.LineWidth = 2;
+    lgd = legend("Amplitude","Phase");
     colorbar;
     grid on
+    hold off
 
     subplot(2,3,4);
 image24 = imagesc(Y_exc, Z_exc, squeeze(PSF_exc_3d(:,(N+1)/2,:)));
