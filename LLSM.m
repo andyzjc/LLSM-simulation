@@ -2,26 +2,26 @@ clear all
 close all
 
 %% Physical parameters
- theta = [30, 90, 150, 210, 270, 330]; % hexogonal
+% theta = [30, 90, 150, 210, 270, 330]; % hexogonal
 % theta = [30, 150, 210, 330]; % square
-% theta = [90, 270]; % standing wave
+theta = [90, 270]; % standing wave
 
 weighting =  [1, 1, 1, 1, 1, 1]; % beam weighting
 
 % Physical Parameter 
-N = 513; % pixels
+N = 1025; % pixels
 n = 1.33;
 lambda_exc = 0.488; % um 
 lambda_det = 0.488;
 wavelength_exc =  lambda_exc / n;
 wavelength_det = lambda_det / n;
-NAmin = 0.5;
-NAmax = 0.6;
+NAmin = 0.2;
+NAmax = 0.4;
 NAdet = 1.0;
 NAideal = (NAmin + NAmax)/2;
-dither_period = 3; % um
+dither_period = 10; % um
 dither_step = 201; % number of s teps per dither period 
-gauss_bound_width = 3; % Gaussian Bounding, um
+gauss_bound_width = 4; % Gaussian Bounding, um
 xz_scale = 2;
 y_scale = 2;
 
@@ -42,7 +42,7 @@ ky_exc = sqrt(k_wave^2 - kx_exc.^2 - kz_exc.^2);
 ky_exc(kx_exc.^2 + kz_exc.^2 > k_wave.^2 ) = 0;
 x_exc = deltax * ax; 
 z_exc = x_exc'; 
-y_exc = (-(N+1)/2+1 : (N+1)/2-1) * deltax * y_scale; 
+y_exc = (  -(N-1)/2 : (N-1)/2 ) * deltax * y_scale ;
 
 % detection
 kx_det = kx_exc;
@@ -91,8 +91,11 @@ Illum_bound = Illum_bound/max(max(Illum_bound));
 A_mask = ((k_NAmax > sqrt(kx_exc.^2 + kz_exc.^2)) .* (k_NAmin < sqrt(kx_exc.^2 + kz_exc.^2)));
 
 % Pupil functions
+% Pupil_fun_exc = Illum_bound .* A_mask .* k_wave./ky_exc;
+% Pupil_fun_exc(Pupil_fun_exc == inf) = 0;
+% Pupil_fun_exc = fillmissing(Pupil_fun_exc,'constant',0);
 Pupil_fun_exc = Illum_bound .* A_mask;
-Pupil_fun_det = k_det > sqrt(kx_det.^2 + ky_det.^2);
+Pupil_fun_det = k_det.^2 > kx_det.^2 + ky_det.^2;
 
 % % Propagation
 tic
@@ -173,6 +176,8 @@ image12 = imagesc(X_exc,Z_exc, abs( E_ideal));
     ylabel("z/\lambda")
     axis image
     colorbar;
+    image12.Parent.XLim = [-20,20];
+    image12.Parent.YLim = [-20,20];
 
     subplot(3,4,3);
 image13 = imagesc(X_exc, Z_exc, abs(E_bound));
@@ -247,8 +252,11 @@ image19 = imagesc(X_exc, Z_exc ,PSF_exc_3d_dither(:,:,(N+1)/2));
           "Dither Step = " + num2str(dither_step))
     xlabel("x/\lambda")
     ylabel("z/\lambda")
+        axis image;
+    image19.Parent.XLim = [-10,10];
+    image19.Parent.YLim = [-10,10];
     colorbar;
-    axis image;
+
 
     subplot(3,4,10)
     zPSF = squeeze(PSF_exc_3d_dither(:,(N+1)/2,(N+1)/2))/max(squeeze(PSF_exc_3d_dither(:,(N+1)/2,(N+1)/2)));
@@ -328,7 +336,7 @@ phase1 = plot( KZ_exc, OTF_exc_3d_phase(:,(N+1)/2,(N+1)/2));
     hold off
 
     subplot(2,3,4);
-image24 = imagesc(Y_exc, Z_exc, squeeze(PSF_exc_3d(:,(N+1)/2,:)));
+image24 = imagesc(Y_exc((N+1)/2:end), Z_exc, squeeze(PSF_exc_3d(:,(N+1)/2,(N+1)/2:end)));
     title("YZ-Excitation-PSF, " + "X = 0" )
     axis image
     xlabel("y/\lambda")
@@ -336,7 +344,7 @@ image24 = imagesc(Y_exc, Z_exc, squeeze(PSF_exc_3d(:,(N+1)/2,:)));
     colorbar
 
     subplot(2,3,5);
-image25 = imagesc(Y_exc,Z_exc, squeeze(PSF_exc_3d_dither(:,(N+1)/2,:)) );
+image25 = imagesc(Y_exc((N+1)/2:end),Z_exc, squeeze(PSF_exc_3d_dither(:,(N+1)/2,(N+1)/2:end)) );
     title("Dithered YZ-Excitation-PSF, " + "X = 0" )
     xlabel("y/\lambda")
     ylabel("z/\lambda")
