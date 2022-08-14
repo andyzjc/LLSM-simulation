@@ -22,16 +22,16 @@ function Simulate(handles)
             CreateLattice;
             Lattice.islattice = 1;
         case '2dgaussian'
-            Data.Pupil_fun_exc = exp( -(Data.kx_exc.^2 + Data.kz_exc.^2)/ (Data.k_apertureNA) );
+            Data.Pupil_fun_exc = exp( -(Data.kx_exc.^2 + Data.kz_exc.^2)/ (Data.k_apertureNA.^2) );
             Lattice.islattice = 0;
         case '1dgaussian'
-            Data.Pupil_fun_exc(:,(Data.N+1)/2) = exp( (Data.KZ_exc.^2)/ (Data.k_apertureNA) );
+            Data.Pupil_fun_exc(:,(Data.N+1)/2) = exp( -(Data.KZ_exc.^2)/ (Data.k_apertureNA.^2) );
             Lattice.islattice = 0;
         case '2dairy'
             Data.Pupil_fun_exc = Data.k_apertureNA.^2 > (Data.kx_exc.^2 + Data.kz_exc.^2);
             Lattice.islattice = 0;
         case '1dairy'
-            Data.Pupil_fun_exc(:,(Data.N+1)/2) = Data.k_apertureNA >= (Data.KZ_exc.^2) ;
+            Data.Pupil_fun_exc(:,(Data.N+1)/2) = Data.k_apertureNA >= abs(Data.KZ_exc) ;
             Lattice.islattice = 0;
     end
 
@@ -58,20 +58,28 @@ function Simulate(handles)
     % dithering for lattice
     disp("Dithering")
 
-    % dithering along x exc
-    for j = 1:Data.dither_step
-        PSF_exc_3d_dither = PSF_exc_3d_dither + ...
-            circshift(PSF_exc_3d,round(j * Data.dither_period / Data.deltax / Data.dither_step),2);
+    if Lattice.islattice == 1
+        % dithering along x exc
+        for j = 1:Data.dither_step
+            PSF_exc_3d_dither = PSF_exc_3d_dither + ...
+                circshift(PSF_exc_3d,round(j * Data.dither_period / Data.deltax / Data.dither_step),2);
+        end
+    else
+        for j = 1:length(Data.X_exc)*2
+            PSF_exc_3d_dither = PSF_exc_3d_dither + ...
+                circshift(PSF_exc_3d,j,2);
+        end
+        Data.dither_period = max(Data.X_exc) *2;
     end
 
     % Overall PSF
     Overall_PSF_axial = squeeze(PSF_exc_3d_dither(:,:,(Data.N+1)/2)) .* squeeze(PSF_det_3d(:,(Data.N+1)/2,:))' ;
-    Overall_PSF_lateral = squeeze(PSF_exc_3d_dither(:,(Data.N+1)/2,:)) .* squeeze(PSF_det_3d(:,:,(Data.N+1)/2));
+%     Overall_PSF_lateral = squeeze(PSF_exc_3d_dither(:,(Data.N+1)/2,:)) .* squeeze(PSF_det_3d(:,:,(Data.N+1)/2));
     
     % Normalize
     Data.PSF_exc_3d = PSF_exc_3d/max(max(max(PSF_exc_3d)));
     Data.PSF_exc_3d_dither = PSF_exc_3d_dither/max(max(max(PSF_exc_3d_dither)));
     Data.PSF_det_3d = PSF_det_3d/max(max(max(PSF_det_3d)));  
     Data.Overall_PSF_axial = Overall_PSF_axial/max(max(Overall_PSF_axial));
-    Data.Overall_PSF_lateral = Overall_PSF_lateral/max(max(Overall_PSF_lateral));
+%     Data.Overall_PSF_lateral = Overall_PSF_lateral/max(max(Overall_PSF_lateral));
     toc
