@@ -185,7 +185,7 @@ overallOTF_axial = abs(overallOTF_axial)/max(max(abs(overallOTF_axial)));
     axis image;  
     image37.Parent.XLim = [-1,1];
     image37.Parent.YLim = [-1,1];
-    caxis([0,0.1])
+    caxis([0,0.3])
 
     h1 = subplot(2,4,[4,8]);
     hold on
