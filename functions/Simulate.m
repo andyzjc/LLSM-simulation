@@ -39,7 +39,7 @@ function Simulate(handles)
 
     % Detection
     Data.Pupil_fun_det = Data.k_det.^2 > Data.kx_det.^2 + Data.ky_det.^2;
-% 
+
 %     Data.Pupil_fun_exc = Data.Pupil_fun_exc .* Data.k_wave_exc./Data.ky_exc;
 %     Data.Pupil_fun_exc(Data.Pupil_fun_exc == inf) = 0;
 %     Data.Pupil_fun_exc = fillmissing(Data.Pupil_fun_exc,'constant',0);

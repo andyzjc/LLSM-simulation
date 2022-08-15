@@ -31,7 +31,7 @@ function SaveResults
     for i = (Data.N+1)/2:size(Data.Y_exc,2)
         Figures.fig4 = figure("Visible","off",'WindowState','maximized');
         Figures.fig4.Name = "PSF/OTF";
-        h1 = subplot(2,2,1);
+        h1 = subplot(2,3,1);
         imagesc(Data.X_exc,Data.Z_exc,squeeze(Data.PSF_exc_3d(:,:,i)));
         title("XZ-Excitation PSF - Y=" + num2str(Data.Y_det(i),'%.2f') + "\lambda / n")
         xlabel("x/\lambda / n")
@@ -44,8 +44,8 @@ function SaveResults
         colorbar;
         axis image;
 
-        h2 = subplot(2,2,2);
-        imagesc(Data.KX_exc, Data.KZ_exc, squeeze(abs(OTF_exc_3d(:,:,i))/max(max(abs(OTF_exc_3d(:,:,i))))));
+        h2 = subplot(2,3,2);
+        image1 = imagesc(Data.KX_exc, Data.KZ_exc, squeeze(abs(OTF_exc_3d(:,:,i))));
         title("XZ-Excitation OTF - Y=" + num2str(Data.Y_det(i),'%.2f') + "\lambda / n")
         xlabel("kx * \lambda / n")
         ylabel("kz * \lambda / n")
@@ -53,11 +53,14 @@ function SaveResults
         h2.YAxis.FontSize = 10; 
         h2.XAxis.FontWeight = 'bold'; 
         h2.YAxis.FontWeight = 'bold'; 
+        axis image;
+        image1.Parent.XLim = [-1,1];
+        image1.Parent.YLim = [-1,1];        
         colormap(hot(256))
         colorbar; 
-        axis image; 
+         
 
-        h3 = subplot(2,2,3);
+        h3 = subplot(2,3,3);
         line = plot(Data.Z_exc, squeeze(Data.PSF_exc_3d_dither(:,(Data.N+1)/2,i)));
         title("Dithered Z-Excitation PSF - Y=" + num2str(Data.Y_det(i),'%.2f') + "\lambda / n")
         xlabel("z/\lambda / n")
@@ -71,10 +74,8 @@ function SaveResults
         colorbar; 
         grid on;
 
-        h4 = subplot(2,2,4);
-        hold on
+        h4 = subplot(2,3,4);
         amp = plot(Data.KZ_exc, squeeze(abs(OTF_exc_3d_dither(:,(Data.N+1)/2,i)/max(abs(OTF_exc_3d_dither(:,(Data.N+1)/2,i))))));
-        phase = plot(Data.KZ_exc,  squeeze(angle(OTF_exc_3d_dither(:,(Data.N+1)/2,i))));
         title("Dithered Z-Excitation OTF - Y=" + num2str(Data.Y_det(i),'%.2f') + "\lambda / n")
         xlabel("kz * \lambda / n")
         ylabel("Normalized a.u. ")
@@ -84,10 +85,20 @@ function SaveResults
         h4.YAxis.FontWeight = 'bold'; 
         amp.Color = 'r';
         amp.LineWidth = 2;
-        phase.Color = 'g';
+        grid on;
+
+        h5 = subplot(2,3,5:6);
+        phase = plot(Data.KZ_exc,  squeeze(angle(OTF_exc_3d_dither(:,(Data.N+1)/2,i))));
+        title("Dithered Z-Excitation OTF Phase - Y=" + num2str(Data.Y_det(i),'%.2f') + "\lambda / n")
+        xlabel("kz * \lambda / n")
+        ylabel("Normalized a.u. ")
+        h4.XAxis.FontSize = 10; 
+        h4.YAxis.FontSize = 10; 
+        h4.XAxis.FontWeight = 'bold'; 
+        h4.YAxis.FontWeight = 'bold'; 
+        phase.Color = 'r';
         phase.LineWidth = 2;
-        colorbar; 
-        hold off
+        phase.Parent.YLim = [-pi,pi];
         grid on;
 
         frame = getframe(Figures.fig4);

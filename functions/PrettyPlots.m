@@ -95,20 +95,29 @@ image25 = imagesc(Y_exc((Data.N+1)/2:end),Z_exc, yzPSF_exc_dither );
     colorbar;
 
     subplot(2,3,6);
-    yPSF_exc = squeeze(Data.PSF_exc_3d_dither((Data.N+1)/2,(Data.N+1)/2,:));
+    hold on
+    yPSF_exc = squeeze(Data.PSF_exc_3d((Data.N+1)/2,(Data.N+1)/2,:));
+    yPSF_exc_dither = squeeze(Data.PSF_exc_3d_dither((Data.N+1)/2,(Data.N+1)/2,:));
     % Calculate yFWHM
     index = find(yPSF_exc >= 0.5);
     Data.yFWHM = Y_exc(index(end)) - Y_exc(index(1)); % pixels
-image26 = plot(Y_exc, yPSF_exc );
+    index = find(yPSF_exc_dither >= 0.5);
+    Data.yFWHM_dither = Y_exc(index(end)) - Y_exc(index(1)); % pixels
+image26_1 = plot(Y_exc, yPSF_exc );
+image26_2 = plot(Y_exc, yPSF_exc_dither);
     title("Y-Excitation-PSF, " + "X = 0, Z = 0, " + ...
-          "yFWHM = " + num2str(Data.yFWHM) + "  \lambda_{exc}/n")
+          "yFWHM = " + num2str(Data.yFWHM) + "  \lambda_{exc}/n, " +...
+          "yFWHM_{dither} = " + num2str(Data.yFWHM_dither) + "\lambda_{exc}/n")
     xlabel("y/  \lambda_{exc}/n")
     ylabel("Normalized a.u. ")
-    image26.Color = 'r';
-    image26.LineWidth = 2;
+    image26_1.Color = 'g';
+    image26_1.LineWidth = 2;
+    image26_2.Color = 'r';
+    image26_2.LineWidth = 2;
     colorbar;
     grid on
     drawnow
+    hold off
     
 %% Figure 3 - Overall PSF/OTF
     Figures.fig3 = figure(3);  
@@ -176,6 +185,7 @@ image35 = imagesc(KX_exc,...
     subplot(2,4,7)
 
 overallOTF_axial = conv2(abs(xzOTF_exc),abs(xzOTF_det));
+% overallOTF_axial = fftshift(fft2(Data.Overall_PSF_axial));
 overallOTF_axial = abs(overallOTF_axial)/max(max(abs(overallOTF_axial)));
  image37 = imagesc(KX_det,KZ_det,overallOTF_axial);
     title("Overall OTF")
@@ -185,7 +195,7 @@ overallOTF_axial = abs(overallOTF_axial)/max(max(abs(overallOTF_axial)));
     axis image;  
     image37.Parent.XLim = [-1,1];
     image37.Parent.YLim = [-1,1];
-    caxis([0,0.3])
+    caxis([0,1])
 
     h1 = subplot(2,4,[4,8]);
     hold on
