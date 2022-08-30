@@ -15,15 +15,16 @@ function CreateLattice
             (N+1)/2 + round(kzposition(j)) ,...
             (N+1)/2 + round(kxposition(j)) ) = 1 * weighting(j);
     end
-    Lattice.E_ideal = ifft2(Lattice.Illumi_ideal); 
+    Lattice.E_ideal = fftshift(ifft2(ifftshift(Lattice.Illumi_ideal))); 
     
     % bounded lattice 
     gauss_bound = exp(-2 * Data.z_exc.^2 / (Data.gauss_bound_width)^2);
     Lattice.E_bound = gauss_bound .* Lattice.E_ideal;
     
     % bounded back pupil
-    Lattice.Illum_bound = abs(fft2(fftshift(Lattice.E_bound))).^2;
-    Lattice.Illum_bound = Lattice.Illum_bound/max(max(Lattice.Illum_bound));
+%     Lattice.Illum_bound = abs(fft2(fftshift(Lattice.E_bound))).^2;
+%     Lattice.Illum_bound = Lattice.Illum_bound/max(max(Lattice.Illum_bound));
+    Lattice.Illum_bound = fftshift(fft2(ifftshift(Lattice.E_bound)));
     
     % Generate mask 
     Lattice.A_mask = ((Data.k_NAmax > sqrt(Data.kx_exc.^2 + Data.kz_exc.^2)) .* (Data.k_NAmin < sqrt(Data.kx_exc.^2 + Data.kz_exc.^2)));

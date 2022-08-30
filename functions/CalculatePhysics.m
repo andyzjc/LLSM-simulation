@@ -27,10 +27,10 @@ function Calculate_physics(handles)
     Data.z_exc = Data.x_exc'; 
     % y-propagation
     Data.y_exc = (  -(Data.N-1)/2 : (Data.N-1)/2  ) * Data.deltax * Data.y_scale; 
-    Data.KY_exc = (-(Data.N-1)/2 : (Data.N-1)/2) * 1/(2*max(Data.y_exc)) / Data.k_wave_exc;
+    Data.KY_exc = (-(Data.N-1)/2 : (Data.N-1)/2) * 1/(2*max(Data.y_exc)) / (2*Data.k_wave_exc);
 
     % for displaying
-    Data.KX_exc = Data.kx_exc(1,:) / Data.k_wave_exc;
+    Data.KX_exc = Data.kx_exc(1,:) / (2*Data.k_wave_exc);
     Data.KZ_exc = Data.KX_exc';
     Data.X_exc = Data.x_exc(1,:)  / Data.wavelength_exc; % value * wavelength = physical value (um)
     Data.Z_exc = Data.X_exc'; 
@@ -50,10 +50,10 @@ function Calculate_physics(handles)
 
     %z-propagation 
     Data.z_det = (  -(Data.N-1)/2 : (Data.N-1)/2  )  * Data.deltax * Data.y_scale; % no scaling factor
-    Data.KZ_det = (-(Data.N-1)/2 : (Data.N-1)/2) * 1/(2*max(Data.z_det)) / Data.k_wave_det;
+    Data.KZ_det = (-(Data.N-1)/2 : (Data.N-1)/2) * 1/(2*max(Data.z_det)) / (2*Data.k_wave_det);
 
     % for displaying
-    Data.KX_det = Data.kx_det(1,:) / Data.k_wave_det;
+    Data.KX_det = Data.kx_det(1,:) / (2 * Data.k_wave_det);
     Data.KY_det = Data.KX_det';
     Data.X_det = Data.x_det(1,:)  / Data.wavelength_det;
     Data.Y_det = Data.X_det';

@@ -25,8 +25,8 @@ Figures.fig1 = figure(1);
 image16 = imagesc( KX_exc, KZ_exc,...
                   real(Data.Pupil_fun_exc) );
     title("Rear Pupil")
-    xlabel("kx * \lambda")
-    ylabel("kz * \lambda")
+    xlabel("k_x/(4\pin/\lambda_{exc})")
+    ylabel("k_z/(4\pin/\lambda_{exc})")
     axis image
     image16.Parent.XLim = [-1,1];
     image16.Parent.YLim = [-1,1];
@@ -36,8 +36,8 @@ image16 = imagesc( KX_exc, KZ_exc,...
 xzPSF = Data.PSF_exc_3d(:,:,(N+1)/2);
 image17 = imagesc(X_exc, Z_exc, xzPSF);
     title("XZ-Excitation PSF")
-    xlabel("x/\lambda")
-    ylabel("z/\lambda")
+    xlabel("x/(\lambda_{exc}/n)")
+    ylabel("z/(\lambda_{exc}/n)")
     colorbar;
     axis image;
 
@@ -47,8 +47,8 @@ image18 = imagesc( KX_exc,...
                   KZ_exc,...
                   abs(xzOTF)/max(max(abs(xzOTF))) ) ;
     title("XZ-Excitation OTF")
-    xlabel("kx * \lambda")
-    ylabel("kz * \lambda")
+    xlabel("k_x/(4\pin/\lambda_{exc})")
+    ylabel("k_z/(4\pin/\lambda_{exc})")
     colorbar;
     axis image
     image18.Parent.XLim = [-1,1];

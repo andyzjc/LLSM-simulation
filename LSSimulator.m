@@ -22,7 +22,7 @@ function varargout = LSSimulator(varargin)
 
 % Edit the above text to modify the response to help LSSimulator
 
-% Last Modified by GUIDE v2.5 08-Aug-2022 13:24:39
+% Last Modified by GUIDE v2.5 30-Aug-2022 11:23:36
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -844,3 +844,12 @@ function pushbutton_plot_Callback(hObject, eventdata, handles)
     ClosePlots;
     disp("Ploting")
     PrettyPlots;
+
+
+% --- Executes on button press in checkbox_fastdither.
+function checkbox_fastdither_Callback(hObject, eventdata, handles)
+% hObject    handle to checkbox_fastdither (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of checkbox_fastdither
