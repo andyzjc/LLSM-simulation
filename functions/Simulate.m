@@ -31,7 +31,7 @@ function Simulate(handles)
             Data.Pupil_fun_exc = Data.k_apertureNA.^2 > (Data.kx_exc.^2 + Data.kz_exc.^2);
             Lattice.islattice = 0;
         case '1dairy'
-            Data.Pupil_fun_exc(:,(Data.N+1)/2) = (Data.k_apertureNA/2) >= abs(Data.kz_exc(:,1));
+            Data.Pupil_fun_exc(:,(Data.N+1)/2) = (Data.k_apertureNA) >= abs(Data.kz_exc(:,1));
             Lattice.islattice = 0;
     end
 
