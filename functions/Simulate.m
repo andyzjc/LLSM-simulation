@@ -17,7 +17,7 @@ function Simulate(handles)
         case 'bessel'
             Data.Pupil_fun_exc = ((Data.k_NAmax > sqrt(Data.kx_exc.^2 + Data.kz_exc.^2)) ...
                              .* (Data.k_NAmin < sqrt(Data.kx_exc.^2 + Data.kz_exc.^2)));
-            Lattice.islattice = 1;
+            Lattice.islattice = 0;
         case 'other'
             CreateLattice;
             Lattice.islattice = 1;
