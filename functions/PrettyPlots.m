@@ -102,14 +102,14 @@ image25 = imagesc(Y_exc((Data.N+1)/2:end),Z_exc, yzPSF_exc_dither );
     index = find(yPSF_exc((Data.N+1)/2:end) <= 0.5);
     index_dither = find(yPSF_exc_dither((Data.N+1)/2:end) <= 0.5);
     if ~isempty(index)
-        Data.yFWHM = Y_exc((Data.N+1)/2+index(1)-1);
+        Data.yFWHM = 2 * Y_exc((Data.N+1)/2+index(1)-1);
     else
         Data.yFWHM = "N/A";
     end
     if ~isempty(index_dither)
-        Data.yFWHM_dither = Y_exc((Data.N+1)/2+index_dither(1)-1);
+        Data.yFWHM_dither = 2 * Y_exc((Data.N+1)/2+index_dither(1)-1);
     else
-        Data.yFWHM = "N/A";
+        Data.yFWHM_dither = "N/A";
     end
     
 image26_1 = plot(Y_exc, yPSF_exc );
