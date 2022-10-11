@@ -22,7 +22,7 @@ function varargout = LSSimulator(varargin)
 
 % Edit the above text to modify the response to help LSSimulator
 
-% Last Modified by GUIDE v2.5 30-Aug-2022 11:23:36
+% Last Modified by GUIDE v2.5 10-Oct-2022 12:03:41
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -853,3 +853,129 @@ function checkbox_fastdither_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of checkbox_fastdither
+
+
+% --- Executes on button press in checkbox_realspaceGaussianBound.
+function checkbox_realspaceGaussianBound_Callback(hObject, eventdata, handles)
+% hObject    handle to checkbox_realspaceGaussianBound (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of checkbox_realspaceGaussianBound
+
+
+% --- Executes on button press in checkbox_tophatbeam.
+function checkbox_tophatbeam_Callback(hObject, eventdata, handles)
+% hObject    handle to checkbox_tophatbeam (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of checkbox_tophatbeam
+
+
+% --- Executes on button press in checkbox_gaussianbeam.
+function checkbox_gaussianbeam_Callback(hObject, eventdata, handles)
+% hObject    handle to checkbox_gaussianbeam (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of checkbox_gaussianbeam
+
+
+% --- Executes on button press in checkbox_UniformTophatProfile.
+function checkbox_UniformTophatProfile_Callback(hObject, eventdata, handles)
+% hObject    handle to checkbox_UniformTophatProfile (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of checkbox_UniformTophatProfile
+
+
+% --- Executes on button press in checkbox_gaussianBeamProfile.
+function checkbox_gaussianBeamProfile_Callback(hObject, eventdata, handles)
+% hObject    handle to checkbox_gaussianBeamProfile (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of checkbox_gaussianBeamProfile
+
+
+% --- Executes on button press in checkbox_TophatProfile.
+function checkbox_TophatProfile_Callback(hObject, eventdata, handles)
+% hObject    handle to checkbox_TophatProfile (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of checkbox_TophatProfile
+
+
+% --- Executes on button press in checkbox_Gaussian_profile.
+function checkbox_Gaussian_profile_Callback(hObject, eventdata, handles)
+% hObject    handle to checkbox_Gaussian_profile (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of checkbox_Gaussian_profile
+
+
+% --- Executes on button press in radiobutton_SW_Lattice.
+function radiobutton_SW_Lattice_Callback(hObject, eventdata, handles)
+% hObject    handle to radiobutton_SW_Lattice (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of radiobutton_SW_Lattice
+global Data
+handles.radiobutton_standingwave.Value = 0;
+handles.radiobutton_Square_lattice.Value = 0;
+handles.radiobutton_hex_lattice.Value = 0;
+handles.radiobutton_bessel.Value = 0;
+handles.radiobutton_other_lattice.Value = 0;
+handles.radiobutton_2dgaussian.Value = 0;
+handles.radiobutton_1dgaussian.Value = 0;
+handles.radiobutton_2dairy.Value = 0;
+handles.radiobutton_1dairy.Value = 0;
+handles.radiobutton_SW_Lattice.Value = 1;
+Data.sti_case = 'SWLattice';
+Data.angle = [90,90,270,270];
+Data.weighting = [0,0,0,0];
+
+handles.edit_beam_angle.String = num2str(Data.angle);
+handles.edit_beam_weighting.String = num2str(Data.weighting);
+
+
+% --- Executes on button press in radiobutton_SW_Lattice_Hex.
+function radiobutton_SW_Lattice_Hex_Callback(hObject, eventdata, handles)
+% hObject    handle to radiobutton_SW_Lattice_Hex (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of radiobutton_SW_Lattice_Hex
+
+
+% --- Executes on button press in radiobutton_SW_Lattice_Square.
+function radiobutton_SW_Lattice_Square_Callback(hObject, eventdata, handles)
+% hObject    handle to radiobutton_SW_Lattice_Square (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of radiobutton_SW_Lattice_Square
+
+
+
+% --- Executes on button press in radiobutton_SW_Incoherent.
+function radiobutton_SW_Incoherent_Callback(hObject, eventdata, handles)
+% hObject    handle to radiobutton_SW_Incoherent (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of radiobutton_SW_Incoherent
+
+
+% --- Executes on button press in radiobutton_SW_Coherent.
+function radiobutton_SW_Coherent_Callback(hObject, eventdata, handles)
+% hObject    handle to radiobutton_SW_Coherent (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of radiobutton_SW_Coherent
