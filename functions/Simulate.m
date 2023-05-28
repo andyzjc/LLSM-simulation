@@ -22,10 +22,10 @@ function Simulate(handles)
             CreateLattice;
             Lattice.islattice = 1;
         case '2dgaussian'
-            Data.Pupil_fun_exc = exp( -(Data.kx_exc.^2 + Data.kz_exc.^2)/ ((Data.k_apertureNA/2).^2) );
+            Data.Pupil_fun_exc = exp( -(Data.kx_exc.^2 + Data.kz_exc.^2)/ ((Data.k_apertureNA).^2) );
             Lattice.islattice = 0;
         case '1dgaussian'
-            Data.Pupil_fun_exc(:,(Data.N+1)/2) = exp( -(Data.kz_exc(:,1).^2)/ ((Data.k_apertureNA/2).^2) );
+            Data.Pupil_fun_exc(:,(Data.N+1)/2) = exp( -(Data.kz_exc(:,1).^2)/ ((Data.k_apertureNA).^2) );
             Lattice.islattice = 0;
         case '2dairy'
             Data.Pupil_fun_exc = Data.k_apertureNA.^2 > (Data.kx_exc.^2 + Data.kz_exc.^2);
@@ -42,9 +42,9 @@ function Simulate(handles)
     Data.Pupil_fun_det(Data.Pupil_fun_det == Inf) = 0;
     Data.Pupil_fun_det = fillmissing(Data.Pupil_fun_det,'constant',0);
 
-    Data.Pupil_fun_exc = Data.Pupil_fun_exc .* Data.k_wave_exc./Data.ky_exc;
-    Data.Pupil_fun_exc(Data.Pupil_fun_exc == inf) = 0;
-    Data.Pupil_fun_exc = fillmissing(Data.Pupil_fun_exc,'constant',0);
+    % Data.Pupil_fun_exc = Data.Pupil_fun_exc .* Data.k_wave_exc./Data.ky_exc;
+    % Data.Pupil_fun_exc(Data.Pupil_fun_exc == inf) = 0;
+    % Data.Pupil_fun_exc = fillmissing(Data.Pupil_fun_exc,'constant',0);
 
     % Simulation start here
     PSF_exc_3d = zeros(Data.N,Data.N,Data.N);

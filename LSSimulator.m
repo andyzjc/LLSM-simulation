@@ -343,9 +343,9 @@ function pushbutton_simulate_Callback(hObject, eventdata, handles)
     Simulate(handles);
     disp("Ploting")
     PrettyPlots;
-    if handles.checkbox_save2dir.Value == 1
-        SaveResults;
-    end
+    % if handles.checkbox_save2dir.Value == 1
+    %     SaveResults;
+    % end
 
 
 % --- Executes on button press in radiobutton_hex_lattice.
@@ -806,10 +806,10 @@ function pushbutton_select_dir_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
     global Data
-
-    Data.dir = uigetdir("Select an output directory");
-    handles.text_directory.String = Data.dir;
-    
+    % 
+    % Data.dir = uigetdir("Select an output directory");
+    % handles.text_directory.String = Data.dir;
+    % 
 
 % --- Executes during object creation, after setting all properties.
 function text_directory_CreateFcn(hObject, eventdata, handles)
@@ -817,10 +817,10 @@ function text_directory_CreateFcn(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
     global Data
-
-    Data.dir = pwd;
-    hObject.String = pwd;
-
+    % 
+    % Data.dir = pwd;
+    % hObject.String = pwd;
+    % 
 
 % --- Executes during object deletion, before destroying properties.
 function figure1_DeleteFcn(hObject, eventdata, handles)
@@ -829,11 +829,11 @@ function figure1_DeleteFcn(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
     global Data
     global Lattice
-    ClosePlots;
-    handles.text_directory = 'Directory';
-    Data = [];
-    Lattice = [];
-    clear Data;
+    % ClosePlots;
+    % handles.text_directory = 'Directory';
+    % Data = [];
+    % Lattice = [];
+    % clear Data;
 
 % --- Executes on button press in pushbutton_plot.
 function pushbutton_plot_Callback(hObject, eventdata, handles)
