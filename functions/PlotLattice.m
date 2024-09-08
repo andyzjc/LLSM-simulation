@@ -21,7 +21,7 @@ function PlotLattice
     Figures.fig1 = figure(1);
     Figures.fig1.Name = "XZ-Excitation, Focal Plane";
     Figures.fig1.WindowState = 'maximized';
-    colormap(hot(256))
+    colormap(fire(256))
 
      subplot(3,4,1);
 image11 = imagesc(KX_exc,KZ_exc, real(Lattice.Illumi_ideal) );

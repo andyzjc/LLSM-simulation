@@ -9,7 +9,7 @@ function PrettyPlots
     KX_det = Data.KX_det;
     KY_det = Data.KY_det;
     KZ_det = Data.KZ_det;
-    X_exc = Data.X_exc;
+    X_exc = Data.X_esxc;
     Z_exc = Data.Z_exc;
     Y_exc = Data.Y_exc;
     X_det = Data.X_det;
@@ -27,7 +27,7 @@ function PrettyPlots
     Figures.fig2 = figure(2);
     Figures.fig2.Name = "yz-Excitation";
     Figures.fig2.WindowState = 'maximized';
-    colormap(hot(256)) 
+    colormap(fire(256)) 
 
      subplot(2,3,1);
 xzPSF_exc = Data.PSF_exc_3d(:,:,(Data.N+1)/2);
@@ -132,7 +132,7 @@ image26_2 = plot(Y_exc, yPSF_exc_dither);
     Figures.fig3 = figure(3);  
     Figures.fig3.Name = "Overall Excitation";
     Figures.fig3.WindowState = 'maximized';
-    colormap(hot(256))
+    colormap(fire(256))
         
     subplot(2,4,1)
 image31 = imagesc(X_exc,Z_exc,Data.PSF_exc_3d_dither(:,:,(Data.N+1)/2) );

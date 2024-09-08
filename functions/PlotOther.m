@@ -19,7 +19,7 @@ function PlotOther
 Figures.fig1 = figure(1);
     Figures.fig1.Name = "XZ-excitation, Y = 0";
     Figures.fig1.WindowState = 'maximized';
-    colormap(hot(256))
+    colormap(fire(256))
 
     subplot(1,3,1)
 image16 = imagesc( KX_exc, KZ_exc,...
